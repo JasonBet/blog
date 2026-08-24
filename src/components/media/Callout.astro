@@ -1,0 +1,64 @@
+---
+/**
+ * A boxed aside for definitions, warnings and side notes.
+ *
+ *   <Callout type="note" title="Why this matters">
+ *     Any markdown goes here.
+ *   </Callout>
+ *
+ * Types: note (default), tip, warning, definition.
+ */
+interface Props {
+  type?: 'note' | 'tip' | 'warning' | 'definition';
+  title?: string;
+}
+
+const { type = 'note', title } = Astro.props;
+
+const DEFAULTS = {
+  note: { label: 'Note', accent: '#7A6A9B' },
+  tip: { label: 'Tip', accent: '#4F7A6B' },
+  warning: { label: 'Careful', accent: '#B5654A' },
+  definition: { label: 'Definition', accent: '#8A6D3B' },
+} as const;
+
+const meta = DEFAULTS[type];
+---
+
+<aside class="callout" style={`--callout-accent: ${meta.accent}`} data-type={type}>
+  <p class="label">{title ?? meta.label}</p>
+  <div class="body">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  .callout {
+    margin-block: 2rem;
+    padding: 1.1rem 1.3rem 1.2rem;
+    border: 1px solid color-mix(in oklab, var(--callout-accent) 28%, var(--rule));
+    border-left: 2px solid var(--callout-accent);
+    border-radius: 4px 10px 10px 4px;
+    background: color-mix(in oklab, var(--callout-accent) 5%, var(--bg-raised));
+  }
+
+  .label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: color-mix(in oklab, var(--callout-accent) 78%, var(--text));
+    margin-bottom: 0.55rem;
+  }
+
+  .body {
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+  .body :global(> * + *) {
+    margin-top: 0.85em;
+  }
+  .body :global(:last-child) {
+    margin-bottom: 0;
+  }
+</style>

@@ -1,0 +1,37 @@
+---
+import { render } from 'astro:content';
+
+import PostLayout from '@/layouts/PostLayout.astro';
+import Figure from '@/components/media/Figure.astro';
+import Gallery from '@/components/media/Gallery.astro';
+import Video from '@/components/media/Video.astro';
+import Callout from '@/components/media/Callout.astro';
+import { getPosts, getRelated, slugOf, type Post } from '@/lib/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return posts.map((post) => ({
+    params: { slug: slugOf(post) },
+    props: { post, all: posts },
+  }));
+}
+
+interface Props {
+  post: Post;
+  all: Post[];
+}
+
+const { post, all } = Astro.props;
+const { Content, headings } = await render(post);
+const related = getRelated(post, all);
+
+/**
+ * Media components are handed to MDX here, so posts can use <Figure>,
+ * <Gallery>, <Video> and <Callout> without importing them every time.
+ */
+const mdxComponents = { Figure, Gallery, Video, Callout };
+---
+
+<PostLayout post={post} headings={headings} related={related}>
+  <Content components={mdxComponents} />
+</PostLayout>

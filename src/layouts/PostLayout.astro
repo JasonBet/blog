@@ -1,0 +1,198 @@
+---
+/**
+ * A single blog post: title block, optional cover, reading column with a
+ * sticky table of contents, then tags, related posts, signup and comments.
+ */
+import type { MarkdownHeading } from 'astro';
+import { Image } from 'astro:assets';
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import FormattedDate from '@/components/FormattedDate.astro';
+import TopicChip from '@/components/TopicChip.astro';
+import TableOfContents from '@/components/TableOfContents.astro';
+import RelatedPosts from '@/components/RelatedPosts.astro';
+import Newsletter from '@/components/Newsletter.astro';
+import Comments from '@/components/Comments.astro';
+import { TOPICS } from '@/consts';
+import { readTime, type Post } from '@/lib/posts';
+
+interface Props {
+  post: Post;
+  headings: MarkdownHeading[];
+  related: Post[];
+}
+
+const { post, headings, related } = Astro.props;
+const { title, description, pubDate, updatedDate, topic, tags, cover, coverAlt } =
+  post.data;
+
+const topicMeta = TOPICS[topic];
+
+// Use the post's cover as its social-share image when it has one.
+const ogImage = cover?.src;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  image={ogImage}
+  type="article"
+  publishedTime={pubDate}
+  modifiedTime={updatedDate}
+  wide
+>
+  <article class="post" style={`--topic-accent: ${topicMeta.accent}`}>
+    <header class="head">
+      <div class="head-inner">
+        <TopicChip topic={topic} />
+
+        <h1 class="title">{title}</h1>
+
+        <p class="lede">{description}</p>
+
+        <p class="meta byline">
+          <FormattedDate date={pubDate} />
+          <span class="sep" aria-hidden="true">·</span>
+          {readTime(post)}
+          {updatedDate && (
+            <>
+              <span class="sep" aria-hidden="true">·</span>
+              <span>Updated <FormattedDate date={updatedDate} /></span>
+            </>
+          )}
+        </p>
+      </div>
+    </header>
+
+    {
+      cover && (
+        <figure class="cover reveal">
+          <Image
+            src={cover}
+            alt={coverAlt ?? ''}
+            widths={[640, 1024, 1600]}
+            sizes="(max-width: 68rem) 100vw, 68rem"
+            loading="eager"
+          />
+        </figure>
+      )
+    }
+
+    <div class="columns">
+      <div class="prose" data-pagefind-body>
+        <slot />
+      </div>
+
+      <aside class="rail">
+        <TableOfContents headings={headings} />
+      </aside>
+    </div>
+
+    {
+      tags.length > 0 && (
+        <footer class="tags">
+          <span class="eyebrow">Tagged</span>
+          <ul>
+            {tags.map((tag) => (
+              <li>
+                <a class="chip" href={`/tags/${tag}/`}>#{tag}</a>
+              </li>
+            ))}
+          </ul>
+        </footer>
+      )
+    }
+
+    <div class="tail">
+      <RelatedPosts posts={related} />
+      <Newsletter />
+      <Comments />
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .post {
+    padding-top: clamp(2.5rem, 6vw, 4.5rem);
+  }
+
+  .head-inner {
+    max-width: var(--measure);
+  }
+
+  .title {
+    margin-top: 1rem;
+  }
+
+  .lede {
+    margin-top: 1rem;
+    font-size: clamp(1.05rem, 1rem + 0.4vw, 1.2rem);
+    line-height: 1.6;
+    color: var(--text-muted);
+    max-width: 56ch;
+  }
+
+  .byline {
+    margin-top: 1.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding-bottom: 1.6rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .sep {
+    color: var(--text-faint);
+  }
+
+  .cover {
+    margin: 2.25rem 0 0;
+  }
+  .cover :global(img) {
+    width: 100%;
+    max-height: 30rem;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid var(--rule);
+  }
+
+  .columns {
+    margin-top: 2.5rem;
+  }
+
+  .rail {
+    display: none;
+  }
+
+  .tags {
+    margin-top: 3.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    max-width: var(--measure);
+  }
+  .tags ul {
+    margin-top: 0.7rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .tail {
+    max-width: var(--measure);
+  }
+
+  /* The TOC rail only appears when there is room for it beside the text. */
+  @media (min-width: 68rem) {
+    .columns {
+      display: grid;
+      grid-template-columns: minmax(0, var(--measure)) 1fr;
+      gap: 3.5rem;
+      align-items: start;
+    }
+    .rail {
+      display: block;
+    }
+  }
+</style>

@@ -1,0 +1,136 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PostListItem from '@/components/PostListItem.astro';
+import { getPosts, groupByYear, collectTopics, collectTags } from '@/lib/posts';
+import { TOPICS } from '@/consts';
+
+const posts = await getPosts();
+const years = groupByYear(posts);
+const topics = collectTopics(posts).filter((t) => t.count > 0);
+const tags = collectTags(posts).slice(0, 14);
+---
+
+<BaseLayout
+  title="Writing"
+  description="Every post, newest first."
+  wide
+>
+  <header class="page-head reveal">
+    <p class="eyebrow">Archive</p>
+    <h1>Writing</h1>
+    <p class="sub">
+      {posts.length} {posts.length === 1 ? 'post' : 'posts'}, newest first.
+    </p>
+  </header>
+
+  <nav class="filters reveal" aria-label="Browse by topic or tag">
+    <ul class="chips">
+      {
+        topics.map(({ key, count }) => (
+          <li>
+            <a
+              class="chip chip--topic"
+              style={`--topic-accent: ${TOPICS[key].accent}`}
+              href={`/topics/${key}/`}
+            >
+              {TOPICS[key].name}
+              <span class="count">{count}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    {
+      tags.length > 0 && (
+        <ul class="chips chips--tags">
+          {tags.map(({ tag, count }) => (
+            <li>
+              <a class="chip" href={`/tags/${tag}/`}>
+                #{tag}
+                <span class="count">{count}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </nav>
+
+  {
+    years.map(({ year, posts: yearPosts }) => (
+      <section class="year" aria-labelledby={`year-${year}`}>
+        <h2 class="year-label" id={`year-${year}`}>{year}</h2>
+        <div class="list">
+          {yearPosts.map((post, i) => (
+            <PostListItem post={post} index={i} />
+          ))}
+        </div>
+      </section>
+    ))
+  }
+
+  {posts.length === 0 && <p class="empty">Nothing published yet.</p>}
+</BaseLayout>
+
+<style>
+  .page-head {
+    padding-block: clamp(2.5rem, 7vw, 4.5rem) 1.5rem;
+  }
+
+  .page-head h1 {
+    margin-top: 0.5rem;
+  }
+
+  .sub {
+    margin-top: 0.7rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  .filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .chips--tags {
+    opacity: 0.82;
+  }
+
+  .count {
+    color: var(--text-faint);
+    font-size: 0.9em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .year {
+    margin-top: 3rem;
+  }
+
+  .year-label {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--text-faint);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .empty {
+    padding-block: 3rem;
+    color: var(--text-muted);
+  }
+</style>

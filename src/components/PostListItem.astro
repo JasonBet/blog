@@ -1,0 +1,141 @@
+---
+/** One row in a chronological list of posts. */
+import { TOPICS } from '@/consts';
+import { readTime, urlOf, type Post } from '@/lib/posts';
+import FormattedDate from '@/components/FormattedDate.astro';
+
+interface Props {
+  post: Post;
+  /** Staggers the reveal animation down a list. */
+  index?: number;
+}
+
+const { post, index = 0 } = Astro.props;
+const topic = TOPICS[post.data.topic];
+// post.id can contain slashes (folder-per-post); make it safe for an HTML id.
+const headingId = `t-${post.id.replace(/[^a-zA-Z0-9]+/g, '-')}`;
+---
+
+<article
+  class="row reveal"
+  style={`--reveal-delay: ${Math.min(index, 6) * 55}ms; --topic-accent: ${topic.accent}`}
+>
+  <a class="hit" href={urlOf(post)} aria-labelledby={headingId}>
+    <span class="sr-only">Read: {post.data.title}</span>
+  </a>
+
+  <div class="date">
+    <FormattedDate date={post.data.pubDate} format="short" />
+  </div>
+
+  <div class="body">
+    <h3 class="title" id={headingId}>{post.data.title}</h3>
+    <p class="excerpt">{post.data.description}</p>
+    <p class="meta tail">
+      <span class="topic-dot" aria-hidden="true"></span>
+      {topic.name}
+      <span class="sep" aria-hidden="true">·</span>
+      {readTime(post)}
+      {post.data.draft && <span class="draft">Draft</span>}
+    </p>
+  </div>
+</article>
+
+<style>
+  .row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 0 1.5rem;
+    padding-block: 1.6rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  /* A single full-row link, so the whole item is clickable without nesting
+     interactive elements inside each other. */
+  .hit {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: 6px;
+  }
+  .hit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .date {
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+    padding-top: 0.35rem;
+    text-transform: uppercase;
+  }
+
+  .title {
+    font-size: 1.16rem;
+    line-height: 1.3;
+    font-weight: 570;
+    transition: color var(--dur) var(--ease);
+  }
+
+  .excerpt {
+    margin-top: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.93rem;
+    line-height: 1.6;
+    max-width: 54ch;
+  }
+
+  .tail {
+    margin-top: 0.55rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .topic-dot {
+    width: 0.42em;
+    height: 0.42em;
+    border-radius: 50%;
+    background: var(--topic-accent);
+  }
+
+  .sep {
+    color: var(--text-faint);
+  }
+
+  .draft {
+    margin-left: 0.4rem;
+    padding: 0.1em 0.5em;
+    border: 1px dashed var(--rule-strong);
+    border-radius: 999px;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .row:hover .title {
+    color: var(--accent);
+  }
+
+  @media (max-width: 34rem) {
+    .row {
+      grid-template-columns: 1fr;
+      gap: 0.3rem;
+    }
+    .date {
+      padding-top: 0;
+    }
+  }
+</style>

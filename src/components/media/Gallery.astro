@@ -1,0 +1,273 @@
+---
+/**
+ * A photo gallery with a click-to-enlarge lightbox.
+ *
+ * In an .mdx post:
+ *
+ *   import a from './lab-1.jpg';
+ *   import b from './lab-2.jpg';
+ *
+ *   <Gallery
+ *     columns={3}
+ *     images={[
+ *       { src: a, alt: 'Rack of test machines', caption: 'The cluster.' },
+ *       { src: b, alt: 'Console output' },
+ *     ]}
+ *   />
+ *
+ * The lightbox uses a native <dialog>, so Escape and focus trapping are
+ * handled by the browser and it degrades to plain links without JavaScript.
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface GalleryImage {
+  src: ImageMetadata | string;
+  alt: string;
+  caption?: string;
+}
+
+interface Props {
+  images: GalleryImage[];
+  /** Columns on a wide screen. Falls back to fewer as the viewport narrows. */
+  columns?: 2 | 3 | 4;
+  caption?: string;
+}
+
+const { images, columns = 3, caption } = Astro.props;
+
+const fullSrc = (src: ImageMetadata | string) =>
+  typeof src === 'string' ? src : src.src;
+---
+
+<figure class="gallery" style={`--cols: ${columns}`}>
+  <ul class="grid">
+    {
+      images.map((image, i) => (
+        <li>
+          <button
+            class="cell"
+            type="button"
+            data-lightbox-open
+            data-full={fullSrc(image.src)}
+            data-alt={image.alt}
+            data-caption={image.caption ?? ''}
+            aria-label={`Enlarge image ${i + 1}: ${image.alt}`}
+          >
+            {typeof image.src === 'string' ? (
+              <img src={image.src} alt={image.alt} loading="lazy" decoding="async" />
+            ) : (
+              <Image
+                src={image.src}
+                alt={image.alt}
+                widths={[320, 640, 1024]}
+                sizes="(max-width: 46rem) 50vw, 22rem"
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+          </button>
+          {image.caption && <span class="cell-caption">{image.caption}</span>}
+        </li>
+      ))
+    }
+  </ul>
+
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<dialog class="lightbox" data-lightbox aria-label="Enlarged image">
+  <button class="close" type="button" data-lightbox-close aria-label="Close">
+    <svg viewBox="0 0 24 24" aria-hidden="true"
+      ><path d="M6 6l12 12M18 6L6 18"></path></svg
+    >
+  </button>
+  <img data-lightbox-image src="" alt="" />
+  <p class="lightbox-caption" data-lightbox-caption></p>
+</dialog>
+
+<style>
+  .gallery {
+    margin-block: 2.5rem;
+    width: min(var(--shell-wide), calc(100vw - 2 * var(--gutter)));
+    margin-inline: calc(50% - min(var(--shell-wide), calc(100vw - 2 * var(--gutter))) / 2);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    gap: 0.7rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .cell {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-sunken);
+    cursor: zoom-in;
+    transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
+      box-shadow var(--dur) var(--ease);
+  }
+
+  .cell img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    transition: transform 700ms var(--ease);
+  }
+
+  .cell:hover {
+    border-color: var(--rule-strong);
+    box-shadow: var(--shadow-sm);
+  }
+  .cell:hover img {
+    transform: scale(1.04);
+  }
+
+  .cell-caption {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.76rem;
+    color: var(--text-faint);
+    line-height: 1.45;
+  }
+
+  @media (max-width: 46rem) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 26rem) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* --- Lightbox --- */
+
+  .lightbox {
+    max-width: min(96vw, 78rem);
+    max-height: 94svh;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: var(--bg-raised);
+    color: var(--text);
+    overflow: visible;
+  }
+
+  .lightbox::backdrop {
+    background: rgb(12 10 8 / 0.82);
+    backdrop-filter: blur(3px);
+  }
+
+  .lightbox[open] {
+    animation: lightbox-in 240ms var(--ease);
+  }
+
+  @keyframes lightbox-in {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+  }
+
+  .lightbox img {
+    display: block;
+    max-width: min(96vw, 78rem);
+    max-height: 82svh;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+  }
+
+  .lightbox-caption {
+    padding: 0.75rem 1rem;
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .lightbox-caption:empty {
+    display: none;
+  }
+
+  .close {
+    position: absolute;
+    top: -0.85rem;
+    right: -0.85rem;
+    width: 2.1rem;
+    height: 2.1rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--rule-strong);
+    background: var(--bg-raised);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .close:hover {
+    color: var(--text);
+    transform: rotate(90deg);
+  }
+  .close svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lightbox[open] {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  import { claim, onReady } from '@/lib/client';
+
+  /** Lightbox wiring. Bundled by Astro, so `script-src 'self'` still holds. */
+  function setupGalleries() {
+    const dialog = document.querySelector<HTMLDialogElement>('[data-lightbox]');
+    if (!dialog) return;
+
+    const image = dialog.querySelector<HTMLImageElement>('[data-lightbox-image]');
+    const caption = dialog.querySelector<HTMLElement>('[data-lightbox-caption]');
+    if (!image || !caption) return;
+
+    for (const button of document.querySelectorAll<HTMLElement>('[data-lightbox-open]')) {
+      if (!claim(button)) continue;
+
+      button.addEventListener('click', () => {
+        image.src = button.dataset.full ?? '';
+        image.alt = button.dataset.alt ?? '';
+        caption.textContent = button.dataset.caption ?? '';
+        dialog.showModal();
+      });
+    }
+
+    if (claim(dialog)) {
+
+      dialog
+        .querySelector('[data-lightbox-close]')
+        ?.addEventListener('click', () => dialog.close());
+
+      // Clicking the backdrop (i.e. outside the image) closes the dialog.
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+    }
+  }
+
+  onReady(setupGalleries);
+</script>

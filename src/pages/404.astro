@@ -1,0 +1,70 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getPosts, urlOf } from '@/lib/posts';
+
+const recent = (await getPosts()).slice(0, 4);
+---
+
+<BaseLayout title="Page not found" noindex>
+  <div class="oops">
+    <p class="code">404</p>
+    <h1>That page isn't here.</h1>
+    <p class="sub">
+      The link may be out of date, or I may have moved something. Try{' '}
+      <a class="link" href="/posts/">the archive</a> or{' '}
+      <a class="link" href="/search">search</a>.
+    </p>
+
+    {
+      recent.length > 0 && (
+        <>
+          <p class="eyebrow recent-label">Recent posts</p>
+          <ul class="recent">
+            {recent.map((post) => (
+              <li>
+                <a class="link" href={urlOf(post)}>{post.data.title}</a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .oops {
+    padding-block: clamp(4rem, 12vw, 8rem) 4rem;
+    max-width: 42ch;
+  }
+
+  .code {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+  }
+
+  h1 {
+    margin-top: 1rem;
+  }
+
+  .sub {
+    margin-top: 1rem;
+    color: var(--text-muted);
+  }
+
+  .recent-label {
+    margin-top: 3rem;
+  }
+
+  .recent {
+    margin-top: 0.8rem;
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    font-size: 0.95rem;
+  }
+</style>

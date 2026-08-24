@@ -1,0 +1,57 @@
+---
+import { SITE, SOCIALS } from '@/consts';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="shell-wide inner">
+    <p class="colophon">
+      &copy; {year} {SITE.author}. Written in Markdown, built with{' '}
+      <a class="link" href="https://astro.build" rel="noopener noreferrer">Astro</a>.
+    </p>
+
+    <ul class="links">
+      {SOCIALS.github && (
+        <li>
+          <a class="link" href={SOCIALS.github} rel="me noopener noreferrer">GitHub</a>
+        </li>
+      )}
+      {SOCIALS.email && (
+        <li><a class="link" href={`mailto:${SOCIALS.email}`}>Email</a></li>
+      )}
+      {SOCIALS.rss && <li><a class="link" href={SOCIALS.rss}>RSS</a></li>}
+    </ul>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: 6rem;
+    border-top: 1px solid var(--rule);
+    padding-block: 2rem 3rem;
+  }
+
+  .inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .colophon {
+    font-size: 0.8rem;
+    color: var(--text-faint);
+  }
+
+  .links {
+    display: flex;
+    gap: 1.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+</style>

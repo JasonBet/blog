@@ -1,0 +1,112 @@
+---
+/**
+ * Sticky table of contents, shown beside long posts on wide screens.
+ * Headings come from Astro's `render(entry)` result — nothing to maintain.
+ */
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const { headings } = Astro.props;
+
+// h2 and h3 only: h4+ makes the rail noisy, h1 is the post title.
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{
+  items.length >= 3 && (
+    <nav class="toc" aria-labelledby="toc-heading">
+      <p class="eyebrow" id="toc-heading">On this page</p>
+      <ul>
+        {items.map((h) => (
+          <li class:list={['item', { 'item--sub': h.depth === 3 }]}>
+            <a href={`#${h.slug}`} data-toc-link={h.slug}>
+              {h.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<style>
+  .toc {
+    position: sticky;
+    top: 6rem;
+    max-height: calc(100svh - 9rem);
+    overflow-y: auto;
+    padding-left: 1.25rem;
+    border-left: 1px solid var(--rule);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .toc ul {
+    margin-top: 0.85rem;
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .item--sub {
+    padding-left: 0.9rem;
+  }
+
+  .toc a {
+    color: var(--text-faint);
+    transition: color var(--dur) var(--ease);
+    display: block;
+  }
+
+  .toc a:hover {
+    color: var(--text);
+  }
+
+  .toc a.is-current {
+    color: var(--accent);
+  }
+</style>
+
+<script>
+  import { onReady } from '@/lib/client';
+
+  /** Highlights the section currently in view. Bundled, so CSP-safe. */
+  function setupTocHighlight() {
+    const links = document.querySelectorAll<HTMLAnchorElement>('[data-toc-link]');
+    if (links.length === 0) return;
+
+    const byId = new Map<string, HTMLAnchorElement>();
+    for (const link of links) byId.set(link.dataset.tocLink!, link);
+
+    const headings = [...byId.keys()]
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (headings.length === 0) return;
+
+    let current: HTMLAnchorElement | null = null;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const next = byId.get(entry.target.id);
+          if (!next || next === current) continue;
+          current?.classList.remove('is-current');
+          next.classList.add('is-current');
+          current = next;
+        }
+      },
+      // Only the band near the top of the viewport counts as "current".
+      { rootMargin: '-72px 0px -68% 0px', threshold: 0 },
+    );
+
+    headings.forEach((h) => observer.observe(h));
+  }
+
+  onReady(setupTocHighlight);
+</script>

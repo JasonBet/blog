@@ -1,0 +1,126 @@
+---
+/**
+ * An image with an optional caption, and an optional block of text beside it.
+ *
+ * In an .mdx post:
+ *
+ *   <Figure src={diagram} alt="Raft leader election" caption="Term 4 begins." />
+ *
+ *   <Figure src={photo} alt="Whiteboard" side="right">
+ *     Any markdown you put here appears next to the image on wide screens
+ *     and underneath it on a phone.
+ *   </Figure>
+ *
+ * `src` may be an imported image (preferred — it gets optimised and sized)
+ * or a plain URL string.
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  src: ImageMetadata | string;
+  alt: string;
+  caption?: string;
+  /** Which side the text sits on when children are provided. */
+  side?: 'right' | 'left';
+  /** Let the image break out past the reading column. */
+  wide?: boolean;
+  /** Render the image at its natural width rather than filling the column. */
+  fit?: 'cover' | 'contain';
+}
+
+const { src, alt, caption, side = 'right', wide = false, fit = 'contain' } =
+  Astro.props;
+
+const hasText = Astro.slots.has('default');
+---
+
+<figure
+  class:list={['figure', { 'figure--wide': wide, 'figure--split': hasText }]}
+  data-side={hasText ? side : undefined}
+>
+  <div class="media">
+    {
+      typeof src === 'string' ? (
+        <img src={src} alt={alt} loading="lazy" decoding="async" style={`object-fit:${fit}`} />
+      ) : (
+        <Image
+          src={src}
+          alt={alt}
+          widths={[480, 800, 1280]}
+          sizes={wide ? '(max-width: 68rem) 100vw, 68rem' : '(max-width: 46rem) 100vw, 46rem'}
+          loading="lazy"
+          decoding="async"
+          style={`object-fit:${fit}`}
+        />
+      )
+    }
+  </div>
+
+  {hasText && (
+    <div class="aside">
+      <slot />
+    </div>
+  )}
+
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style>
+  .figure {
+    margin-block: 2.25rem;
+  }
+
+  .media img {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--bg-sunken);
+  }
+
+  /* Break out of the reading column, staying centred. */
+  .figure--wide {
+    width: min(var(--shell-wide), calc(100vw - 2 * var(--gutter)));
+    margin-inline: calc(50% - min(var(--shell-wide), calc(100vw - 2 * var(--gutter))) / 2);
+  }
+
+  .aside {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.65;
+  }
+  .aside :global(p + p) {
+    margin-top: 0.9em;
+  }
+  .aside :global(:first-child) {
+    margin-top: 0;
+  }
+
+  figcaption {
+    grid-column: 1 / -1;
+  }
+
+  @media (min-width: 46rem) {
+    .figure--split {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 1.75rem;
+      align-items: center;
+    }
+    .figure--split[data-side='left'] .media {
+      order: 2;
+    }
+    .figure--split[data-side='left'] .aside {
+      order: 1;
+    }
+    .figure--split figcaption {
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 45.99rem) {
+    .aside {
+      margin-top: 1rem;
+    }
+  }
+</style>

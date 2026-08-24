@@ -1,0 +1,107 @@
+---
+/**
+ * The shell every page sits inside: head, header, main, footer.
+ *
+ * Pass SEO props straight through — they are forwarded to BaseHead.
+ */
+import { ClientRouter } from 'astro:transitions';
+
+import '@fontsource-variable/fraunces/wght.css';
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource-variable/inter/wght-italic.css';
+import '@fontsource-variable/jetbrains-mono/wght.css';
+import 'katex/dist/katex.min.css';
+import '@/styles/global.css';
+
+import BaseHead from '@/components/BaseHead.astro';
+import Header from '@/components/layout/Header.astro';
+import Footer from '@/components/layout/Footer.astro';
+import { SITE } from '@/consts';
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article';
+  publishedTime?: Date;
+  modifiedTime?: Date;
+  noindex?: boolean;
+  /** Use the wider shell (listing pages) instead of the reading column. */
+  wide?: boolean;
+}
+
+const { wide = false, ...head } = Astro.props;
+---
+
+<!doctype html>
+<html lang={SITE.lang} class="no-js">
+  <head>
+    <BaseHead {...head} />
+    <ClientRouter />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <Header />
+
+    <main id="main" class={wide ? 'shell-wide' : 'shell'} tabindex="-1">
+      <slot />
+    </main>
+
+    <Footer />
+
+    <script>
+      import { onReady } from '@/lib/client';
+
+      /**
+       * Two small pieces of behaviour, bundled (never inline) so a strict
+       * `script-src 'self'` CSP keeps working:
+       *
+       *  1. Reveal-on-scroll for elements marked `.reveal`.
+       *  2. A `body.is-scrolled` flag so the header can grow a hairline rule.
+       */
+      function setupReveal() {
+        const targets = document.querySelectorAll<HTMLElement>('.reveal:not(.is-visible)');
+        if (targets.length === 0) return;
+
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduced || !('IntersectionObserver' in window)) {
+          targets.forEach((el) => el.classList.add('is-visible'));
+          return;
+        }
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
+        );
+
+        targets.forEach((el) => observer.observe(el));
+      }
+
+      let ticking = false;
+      function onScroll() {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          document.body.classList.toggle('is-scrolled', window.scrollY > 8);
+          ticking = false;
+        });
+      }
+
+      function init() {
+        setupReveal();
+        onScroll();
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onReady(init);
+    </script>
+  </body>
+</html>

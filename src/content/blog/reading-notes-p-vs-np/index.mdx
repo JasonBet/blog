@@ -1,0 +1,73 @@
+---
+title: 'Reading notes: what P vs NP is not asking'
+description: 'A short post, mostly to correct three things I believed about the question before this semester.'
+pubDate: 2026-05-02
+topic: theory
+tags: ['complexity', 'reading-notes']
+---
+
+Short one. Our complexity course spent a lecture on what the P vs NP question
+actually says, and I discovered I had been carrying around three
+misconceptions. Writing them down so they stay corrected.
+
+## It is not "can computers solve hard problems"
+
+The question is about a specific and rather narrow thing: whether every
+decision problem whose *solutions can be verified* in polynomial time can also
+be *solved* in polynomial time. That is it. It says nothing about
+approximation, nothing about average-case difficulty, and nothing about what is
+practical.
+
+<Callout type="definition" title="The classes">
+  **P** — decision problems solvable by a deterministic Turing machine in
+  polynomial time. **NP** — decision problems whose *yes* instances have a
+  certificate verifiable in polynomial time. P ⊆ NP is immediate; the open
+  question is whether the containment is strict.
+</Callout>
+
+## "NP" does not stand for "non-polynomial"
+
+It stands for *nondeterministic polynomial time*. This one is embarrassing in
+retrospect, but the wrong expansion is common enough that it survives
+undisturbed for years. The nondeterminism is the guessing: an NP machine may
+guess a certificate and then verify it deterministically in polynomial time.
+
+The consequence of getting this wrong is believing that NP-hard means
+"exponential", which then makes NP-completeness results sound like lower-bound
+theorems. They are not. They are reductions.
+
+## NP-complete does not mean "hopeless in practice"
+
+SAT is the canonical NP-complete problem, and modern SAT solvers routinely
+dispatch industrial instances with millions of clauses. The hardness is a
+worst-case statement over all instances; real instances have structure, and
+solvers exploit it ruthlessly.
+
+The practical takeaway my professor kept repeating: NP-completeness tells you
+not to look for a general polynomial algorithm. It does not tell you your
+particular instances are hard.
+
+## Why P ≠ NP is expected but unproven
+
+The near-universal expectation is that P ≠ NP. What is genuinely surprising is
+how thoroughly the obvious proof strategies have been ruled out:
+
+- **Relativisation** (Baker–Gill–Solovay, 1975) — there exist oracles $A$ and
+  $B$ with $P^A = NP^A$ and $P^B \neq NP^B$. Any proof that survives adding an
+  oracle cannot settle the question either way, which eliminates ordinary
+  diagonalisation.
+- **Natural proofs** (Razborov–Rudich, 1994) — a large class of
+  circuit-lower-bound arguments would, if they worked, break the
+  pseudorandom generators most of cryptography assumes exist.
+- **Algebrisation** (Aaronson–Wigderson, 2008) — extends the relativisation
+  barrier to cover the algebraic techniques that got around it.
+
+So the honest state of things is not "nobody has been clever enough yet". It is
+"the three families of technique we know about have each been proved
+insufficient". That is a much stranger situation, and a much more interesting
+one.
+
+---
+
+Next in this course: the polynomial hierarchy, which I am told is where the
+intuition stops helping.

@@ -1,5 +1,5 @@
 {
-  "name": "claude-blog",
+  "name": "blog",
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -7,8 +7,11 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
+    "check": "astro check",
+    "new": "node scripts/new-post.mjs",
+    "og": "node scripts/make-og.mjs",
     "astro": "astro"
   },
   "dependencies": {
@@ -22,7 +25,9 @@
     "astro": "^7.2.6",
     "katex": "^0.18.4",
     "reading-time": "^1.5.0",
+    "rehype-autolink-headings": "^7.1.0",
     "rehype-katex": "^7.0.1",
+    "rehype-slug": "^6.0.0",
     "remark-math": "^6.0.0",
     "sharp": "^0.35.3"
   },
@@ -31,5 +36,6 @@
   },
   "devDependencies": {
     "pagefind": "^1.5.2"
-  }
+  },
+  "private": true
 }

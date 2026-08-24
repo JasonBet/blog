@@ -1,0 +1,138 @@
+---
+title: 'Implementing attention from scratch, twice'
+description: 'I wrote scaled dot-product attention once from the paper and once from the shapes. The second attempt took twenty minutes and I finally understood it.'
+pubDate: 2026-06-14
+topic: machine-learning
+tags: ['transformers', 'implementation-notes', 'linear-algebra']
+cover: ./cover.png
+coverAlt: 'A diagonal-weighted attention heat map beside radiating arcs, in muted green on paper'
+---
+
+import head1 from './head-1.png';
+import head2 from './head-2.png';
+import head3 from './head-3.png';
+
+My first implementation of attention was a transcription. I had the paper open
+and I turned each line of notation into a line of PyTorch, and when the shapes
+lined up I decided I understood it. I did not. A week later I could not explain
+why the softmax was over the last dimension and not the second-to-last.
+
+So I deleted it and started again from the shapes.
+
+## The shape-first version
+
+Forget the equation. Ask what has to come out: for each of $n$ positions, a
+vector that mixes information from all the other positions, weighted by how
+relevant each one is. So the output is $n \times d$, same as the input, and
+somewhere in the middle there must be an $n \times n$ object holding "how much
+does position $i$ care about position $j$".
+
+That $n \times n$ object is the whole idea. Everything else is bookkeeping to
+produce it and then apply it.
+
+```python
+import torch
+import torch.nn.functional as F
+
+def attention(q, k, v, mask=None):
+    """q, k, v: (batch, heads, seq, d_head)"""
+    d_head = q.size(-1)
+
+    # (seq, d) @ (d, seq) -> (seq, seq): every query against every key.
+    scores = q @ k.transpose(-2, -1) / d_head**0.5
+
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, float("-inf"))
+
+    # Normalise across keys, so each query's weights sum to 1.
+    weights = F.softmax(scores, dim=-1)
+
+    # (seq, seq) @ (seq, d) -> (seq, d): a weighted average of values.
+    return weights @ v, weights
+```
+
+Once you see that `scores` is "queries × keys" and that each *row* is one
+query's opinion of every key, the softmax dimension stops being arbitrary. You
+normalise along the axis you are mixing over. That is the last dimension
+because keys are the last dimension. It could not be anything else.
+
+<Callout type="note" title="Why divide by the square root">
+  If $q$ and $k$ have independent components with unit variance, their dot
+  product over $d$ dimensions has variance $d$. Feed that into a softmax and it
+  saturates — one weight goes to 1, the rest to 0, and the gradient vanishes.
+  Dividing by $\sqrt{d}$ restores unit variance and keeps the softmax in its
+  useful range.
+</Callout>
+
+## What the heads actually learn
+
+The thing that made multi-head attention click was plotting the weight matrices
+instead of reading about them. Each head produces its own $n \times n$ map, and
+they specialise almost immediately — well before the model is any good at its
+actual task.
+
+<Gallery
+  columns={3}
+  images={[
+    { src: head1, alt: 'Attention map concentrated tightly along the diagonal', caption: 'Head 1 — local: mostly the previous few tokens.' },
+    { src: head2, alt: 'Attention map with a broader diagonal band', caption: 'Head 2 — a wider window, some longer-range structure.' },
+    { src: head3, alt: 'Attention map with diffuse off-diagonal structure', caption: 'Head 3 — diffuse, spreading attention across the sequence.' },
+  ]}
+  caption="Three heads from the same layer after a short training run. Click any of them to enlarge."
+/>
+
+Splitting $d_{model}$ into $h$ heads of size $d_{model}/h$ costs nothing in
+parameters or FLOPs compared with one big head — it is the same matrices,
+reshaped. What you buy is the ability to attend to several things at once,
+because a single softmax distribution can only really pick out one region.
+
+```python
+class MultiHeadAttention(torch.nn.Module):
+    def __init__(self, d_model, n_heads):
+        super().__init__()
+        assert d_model % n_heads == 0
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.qkv = torch.nn.Linear(d_model, 3 * d_model, bias=False)
+        self.out = torch.nn.Linear(d_model, d_model, bias=False)
+
+    def forward(self, x, mask=None):
+        b, n, d = x.shape
+        # One matmul for all three projections, then split.
+        q, k, v = self.qkv(x).chunk(3, dim=-1)
+        # (b, n, d) -> (b, heads, n, d_head)
+        q, k, v = (
+            t.view(b, n, self.n_heads, self.d_head).transpose(1, 2)
+            for t in (q, k, v)
+        )
+        y, _ = attention(q, k, v, mask)
+        y = y.transpose(1, 2).contiguous().view(b, n, d)
+        return self.out(y)
+```
+
+## The bug that taught me the most
+
+My causal mask was off by one. I built it with `torch.triu(ones, diagonal=0)`
+instead of `diagonal=1`, which meant every position was forbidden from
+attending to *itself*. The model still trained. The loss still went down. It
+was just quietly worse than it should have been, and nothing in the output said
+so.
+
+That is the uncomfortable lesson of this whole area: a model with a subtle bug
+does not crash, it underperforms. So now I plot the mask. Every time.
+
+```python
+# Positions may attend to themselves and everything before them.
+mask = torch.tril(torch.ones(n, n)).view(1, 1, n, n)
+```
+
+## Was writing it twice worth it
+
+Yes, and I think the reason generalises. The first pass was translation — I was
+converting symbols into syntax, and translation can be done without
+comprehension. The second pass forced me to derive each shape from what it had
+to produce, and there is no way to fake that.
+
+If you are working through a paper and your implementation runs on the first
+try, consider deleting it and writing it again from the shapes. It is the
+cheapest comprehension test I know.

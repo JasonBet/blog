@@ -1,0 +1,21 @@
+---
+import { TOPICS, type TopicKey } from '@/consts';
+
+interface Props {
+  topic: TopicKey;
+  /** Render as plain text rather than a link (e.g. inside another link). */
+  static?: boolean;
+}
+
+const { topic, static: isStatic = false } = Astro.props;
+const meta = TOPICS[topic];
+const Tag = isStatic ? 'span' : 'a';
+---
+
+<Tag
+  class="chip chip--topic"
+  style={`--topic-accent: ${meta.accent}`}
+  {...isStatic ? {} : { href: `/topics/${topic}/` }}
+>
+  {meta.name}
+</Tag>

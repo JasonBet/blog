@@ -1,0 +1,138 @@
+---
+/** "Keep reading" — posts scored by shared topic and tags (see lib/posts.ts). */
+import { TOPICS } from '@/consts';
+import { readTime, urlOf, type Post } from '@/lib/posts';
+import FormattedDate from '@/components/FormattedDate.astro';
+
+interface Props {
+  posts: Post[];
+}
+
+const { posts } = Astro.props;
+---
+
+{
+  posts.length > 0 && (
+    <section class="related reveal" aria-labelledby="related-heading">
+      <h2 class="heading" id="related-heading">Keep reading</h2>
+
+      <ul class="grid">
+        {posts.map((post, i) => {
+          const topic = TOPICS[post.data.topic];
+          return (
+            <li
+              class="card"
+              style={`--topic-accent: ${topic.accent}; --reveal-delay: ${i * 60}ms`}
+            >
+              <a class="card-link" href={urlOf(post)}>
+                <span class="eyebrow">
+                  <span class="dot" aria-hidden="true" />
+                  {topic.name}
+                </span>
+                <span class="title">{post.data.title}</span>
+                <span class="excerpt">{post.data.description}</span>
+                <span class="meta">
+                  <FormattedDate date={post.data.pubDate} format="short" />
+                  <span class="sep" aria-hidden="true">·</span>
+                  {readTime(post)}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  )
+}
+
+<style>
+  .related {
+    margin-top: 4.5rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .heading {
+    font-size: 1.05rem;
+    font-weight: 560;
+    letter-spacing: 0.01em;
+    color: var(--text-muted);
+  }
+
+  .grid {
+    margin-top: 1.5rem;
+    display: grid;
+    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    list-style: none;
+    padding: 0;
+  }
+
+  .card {
+    display: flex;
+  }
+
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 1.15rem 1.2rem 1.25rem;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: var(--bg-raised);
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease),
+      box-shadow var(--dur) var(--ease);
+  }
+
+  .card-link:hover {
+    border-color: color-mix(in oklab, var(--topic-accent) 45%, var(--rule));
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: color-mix(in oklab, var(--topic-accent) 70%, var(--text-muted));
+  }
+
+  .dot {
+    width: 0.4em;
+    height: 0.4em;
+    border-radius: 50%;
+    background: var(--topic-accent);
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-weight: 580;
+    font-size: 1.02rem;
+    line-height: 1.3;
+    letter-spacing: -0.012em;
+  }
+
+  .excerpt {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .meta {
+    margin-top: auto;
+    padding-top: 0.5rem;
+    display: flex;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--text-faint);
+  }
+</style>

@@ -1,0 +1,124 @@
+---
+title: 'Amortised analysis without the hand-waving'
+description: 'Everyone can recite that a dynamic array has O(1) amortised append. Fewer people can say what "amortised" is actually claiming. Three methods, and when each one is worth reaching for.'
+pubDate: 2026-07-29
+topic: algorithms
+tags: ['analysis', 'data-structures', 'proofs']
+cover: ./cover.png
+coverAlt: 'A rising curve over stepped blocks that double in width, in muted violet on paper'
+---
+
+The first time someone tells you that appending to a dynamic array is $O(1)$
+amortised, it sounds like a dodge. The operation is obviously not $O(1)$ — some
+appends copy the entire array. What the claim actually says is stronger and
+more precise than "usually fast", and it is worth being able to state exactly.
+
+<Callout type="definition" title="Amortised cost">
+  An operation has amortised cost $T$ if any sequence of $n$ such operations,
+  starting from an empty structure, costs at most $n \cdot T$ in total. This is
+  a worst-case statement about sequences — not an average, and not a
+  probabilistic claim.
+</Callout>
+
+That distinction matters. Average-case analysis assumes a distribution over
+inputs. Amortised analysis assumes nothing: an adversary picks the worst
+sequence it can, and the bound still holds.
+
+## Method 1: aggregate
+
+Add up the total cost of $n$ operations, then divide. For a dynamic array that
+doubles its capacity when full, the copies happen at sizes
+$1, 2, 4, \ldots, 2^k$ where $2^k < n$, so the total copying work is
+
+$$
+\sum_{i=0}^{\lfloor \log_2 n \rfloor} 2^i < 2n
+$$
+
+Each append also does $O(1)$ work of its own, so $n$ appends cost less than
+$3n$ in total, and the amortised cost per append is $O(1)$.
+
+This is the method to reach for when the expensive operations are rare and
+their cost forms a series you can actually sum. It gives you one number for the
+whole sequence, which is also its weakness: it says nothing about individual
+operation types.
+
+## Method 2: the accounting (banker's) method
+
+Charge each operation more than it costs and bank the surplus as credit, then
+spend that credit on the expensive operations. The bound holds as long as the
+balance never goes negative.
+
+For the dynamic array, charge 3 units per append:
+
+| Unit | What it pays for |
+| --- | --- |
+| 1 | Writing the new element |
+| 1 | Eventually copying this element on the next resize |
+| 1 | Eventually copying one older element that has no credit left |
+
+When the array of size $m$ fills up, the $m/2$ elements added since the last
+resize each carry 2 units of stored credit — exactly enough to move all $m$
+elements. The balance touches zero and never crosses it.
+
+<Callout type="tip" title="Choosing the charge">
+  Start by writing down the expensive operation, count what it has to pay for,
+  then work backwards to how many cheap operations must have preceded it. The
+  charge is that ratio, rounded up.
+</Callout>
+
+## Method 3: the potential method
+
+Define a potential function $\Phi$ mapping each state of the structure to a
+non-negative real, with $\Phi(D_0) = 0$. The amortised cost of an operation is
+its real cost plus the change in potential:
+
+$$
+\hat{c_i} = c_i + \Phi(D_i) - \Phi(D_{i-1})
+$$
+
+Sum over $n$ operations and the middle terms telescope:
+
+$$
+\sum_{i=1}^{n} \hat{c_i} = \sum_{i=1}^{n} c_i + \Phi(D_n) - \Phi(D_0)
+$$
+
+Since $\Phi(D_n) \geq 0$ and $\Phi(D_0) = 0$, the amortised total is an upper
+bound on the real total. For the dynamic array with $s$ items and capacity $m$,
+take
+
+$$
+\Phi = 2s - m
+$$
+
+A cheap append raises $s$ by one and leaves $m$ alone, so $\Phi$ rises by 2 and
+the amortised cost is $1 + 2 = 3$. A resizing append copies $m$ items but
+halves the potential in exactly the right way, and the amortised cost comes out
+to 3 again.
+
+## Which method to use
+
+```text
+Rare, summable spikes         -> aggregate
+Several operation types       -> accounting
+State-dependent cost          -> potential
+```
+
+The potential method subsumes the other two — the accounting method's bank
+balance *is* a potential function — but it demands that you guess $\Phi$, and a
+bad guess tells you nothing. In practice I try aggregate first because it is
+concrete, and reach for potential when the cost of an operation depends on how
+unbalanced the structure currently is. Splay trees are the canonical case:
+there is no useful way to talk about them without a potential function.
+
+## The trap worth naming
+
+Amortised $O(1)$ says nothing about any *individual* operation. That single
+resizing append really is $\Theta(n)$, and if you are writing anything with a
+latency budget — a game loop, an audio callback, a real-time controller — the
+amortised bound is the wrong bound to be reasoning about. You want the worst
+case per operation, and you will probably want to pay for it with an
+incremental-resize scheme that copies a few elements on every append instead of
+all of them at once.
+
+Amortised analysis is a statement about throughput. Do not let it quietly
+become a claim about latency.

@@ -1,0 +1,115 @@
+---
+/**
+ * Comments, backed by GitHub Discussions via giscus.
+ *
+ * Nothing here is secret: giscus is configured entirely client-side and the
+ * repo/category IDs are public identifiers. Readers authenticate with GitHub
+ * directly — this site never sees a token.
+ *
+ * Turn it on by filling in COMMENTS in src/consts.ts (see README.md).
+ */
+import { COMMENTS } from '@/consts';
+
+const configured =
+  COMMENTS.enabled && COMMENTS.repoId !== '' && COMMENTS.categoryId !== '';
+---
+
+{
+  configured && (
+    <section class="comments" aria-labelledby="comments-heading">
+      <h2 class="heading" id="comments-heading">Comments</h2>
+      <p class="note">
+        Signed in with GitHub, comments post to this site's{' '}
+        <a class="link" href={`https://github.com/${COMMENTS.repo}/discussions`} rel="noopener noreferrer">
+          Discussions
+        </a>
+        .
+      </p>
+
+      <div
+        class="giscus-mount"
+        data-giscus
+        data-repo={COMMENTS.repo}
+        data-repo-id={COMMENTS.repoId}
+        data-category={COMMENTS.category}
+        data-category-id={COMMENTS.categoryId}
+      />
+    </section>
+  )
+}
+
+<style>
+  .comments {
+    margin-top: 4rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .heading {
+    font-size: 1.05rem;
+    font-weight: 560;
+    color: var(--text-muted);
+  }
+
+  .note {
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--text-faint);
+  }
+
+  .giscus-mount {
+    margin-top: 1.5rem;
+  }
+</style>
+
+<script>
+  import { onReady } from '@/lib/client';
+
+  /**
+   * Loads the giscus widget and keeps its theme in sync with the site's.
+   * Injected from a bundled script rather than a hard-coded <script> tag so
+   * the theme can be chosen at runtime.
+   */
+  function mountGiscus() {
+    const mount = document.querySelector<HTMLElement>('[data-giscus]');
+    if (!mount || mount.dataset.mounted === 'true') return;
+    mount.dataset.mounted = 'true';
+
+    const theme = () =>
+      document.documentElement.dataset.theme === 'dark' ? 'dark_dimmed' : 'light';
+
+    const script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.setAttribute('data-repo', mount.dataset.repo!);
+    script.setAttribute('data-repo-id', mount.dataset.repoId!);
+    script.setAttribute('data-category', mount.dataset.category!);
+    script.setAttribute('data-category-id', mount.dataset.categoryId!);
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '1');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'top');
+    script.setAttribute('data-theme', theme());
+    script.setAttribute('data-lang', 'en');
+    script.setAttribute('data-loading', 'lazy');
+
+    mount.appendChild(script);
+
+    // Re-theme the already-loaded iframe when the reader flips the switch.
+    const observer = new MutationObserver(() => {
+      const frame = document.querySelector<HTMLIFrameElement>('iframe.giscus-frame');
+      frame?.contentWindow?.postMessage(
+        { giscus: { setConfig: { theme: theme() } } },
+        'https://giscus.app',
+      );
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+  }
+
+  onReady(mountGiscus);
+</script>

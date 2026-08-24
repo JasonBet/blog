@@ -1,0 +1,173 @@
+---
+title: 'Raft, and why leader election is the easy part'
+description: 'Raft is sold as the consensus algorithm you can actually understand. After implementing it, I think the understandable part is the election — the log is where it gets you.'
+pubDate: 2026-08-18
+topic: systems
+tags: ['distributed-systems', 'consensus', 'implementation-notes']
+cover: ./cover.png
+coverAlt: 'Concentric arcs radiating outward over a field of dots, in warm terracotta on paper'
+featured: true
+---
+
+import logReplication from './log-replication.png';
+
+Raft was designed to be teachable. The paper is called *In Search of an
+Understandable Consensus Algorithm*, and it opens by more or less accusing
+Paxos of being unteachable. Having spent a semester with both, I think Raft
+delivers on that promise — but not evenly. The leader election half really is
+as simple as advertised. The log replication half is where I lost a weekend.
+
+These are my notes from implementing it, written mostly for the version of me
+who will have forgotten all of this in six months.
+
+## The problem, stated honestly
+
+You have a handful of machines. You want them to agree on an ordered sequence
+of commands, such that any machine that has applied command *i* has applied
+exactly the same command *i* as every other machine. Machines can crash,
+restart, and lose messages. They cannot lie — Raft assumes crash faults, not
+Byzantine ones, which is a much weaker and much more tractable problem.
+
+<Callout type="definition" title="Consensus, informally">
+  A set of processes agrees on a single value, and once a value is decided no
+  process ever decides differently. Raft extends this from one value to a
+  replicated log of values, which is what an actual database needs.
+</Callout>
+
+The trick Raft plays is to reduce the general problem to a much narrower one:
+elect a leader, and then make the leader the only writer. Everything else
+follows from keeping that invariant true.
+
+## Leader election is the easy part
+
+Each server sits in one of three states — follower, candidate, leader — and
+time is divided into *terms*, which are just monotonically increasing integers.
+A term has at most one leader.
+
+```go
+type State int
+
+const (
+    Follower State = iota
+    Candidate
+    Leader
+)
+
+// Every RPC carries a term. This one rule does most of the work.
+func (rf *Raft) observeTerm(term int) {
+    if term > rf.currentTerm {
+        rf.currentTerm = term
+        rf.state = Follower
+        rf.votedFor = -1
+        rf.persist()
+    }
+}
+```
+
+That last function is close to the whole of the election safety argument. Any
+message from a higher term immediately demotes you. A candidate needs votes
+from a majority, each server votes at most once per term, and two majorities of
+the same set must intersect — so two leaders in one term is impossible.
+
+The randomised election timeout is the other half, and it is almost
+embarrassingly practical: if everyone waits a random 150–300 ms before starting
+an election, split votes resolve themselves quickly. There is no clever
+tie-breaking rule. There is just jitter.
+
+<Callout type="tip" title="Where I wasted an afternoon">
+  Reset your election timer on a valid `AppendEntries` from the *current*
+  leader — not on every RPC you receive. Resetting on a stale leader's
+  heartbeat means a partitioned-and-returned node can suppress elections
+  indefinitely.
+</Callout>
+
+## Log replication is where it gets you
+
+Here is the part the diagrams make look simple:
+
+<Figure
+  src={logReplication}
+  alt="Four rows of log entries; the top row is fully filled, each row below has progressively fewer filled entries with the rest shown as dashed outlines"
+  caption="Four replicas, same log prefix, different amounts of it. Solid entries have been replicated; dashed ones have not arrived yet."
+  wide
+/>
+
+Each follower's log is a prefix of the leader's, plus possibly some garbage at
+the end from a previous leader that got interrupted mid-flight. The leader's
+job is to find where each follower diverges and overwrite from there.
+
+The mechanism is the `prevLogIndex` / `prevLogTerm` pair on every
+`AppendEntries` RPC. A follower accepts entries only if its log contains a
+matching entry at that position. If it does not, it rejects, and the leader
+decrements its guess and tries again.
+
+```go
+// The naive version: back off one index per round trip.
+if !reply.Success {
+    rf.nextIndex[peer]--
+    return
+}
+```
+
+This is correct and it is also unusably slow — a follower that is 10,000
+entries behind costs you 10,000 round trips. The fix in section 5.3 of the
+paper is to have the follower report the first index of the conflicting term,
+so the leader can skip a whole term per round trip:
+
+```go
+if !reply.Success {
+    if reply.ConflictTerm == -1 {
+        // Follower's log is simply too short.
+        rf.nextIndex[peer] = reply.ConflictIndex
+    } else if idx, ok := rf.lastIndexOfTerm(reply.ConflictTerm); ok {
+        rf.nextIndex[peer] = idx + 1
+    } else {
+        rf.nextIndex[peer] = reply.ConflictIndex
+    }
+    return
+}
+```
+
+## The rule I kept getting wrong
+
+Of everything in the paper, this is the one that cost me the most debugging
+time, and it is one sentence long:
+
+> A leader never commits log entries from previous terms by counting replicas.
+
+The intuition: an entry from an old term can be present on a majority of
+servers and *still* be overwritten later, because a future leader with a
+different log could be elected. Only once the current leader replicates an
+entry from its *own* term to a majority does everything before it become safe.
+So the commit check has to be:
+
+```go
+for n := rf.lastLogIndex(); n > rf.commitIndex; n-- {
+    if rf.log[n].Term != rf.currentTerm {
+        continue // <- the whole rule, in one line
+    }
+    if rf.countReplicas(n) > len(rf.peers)/2 {
+        rf.commitIndex = n
+        break
+    }
+}
+```
+
+Leave out that `continue` and your implementation will pass every test you
+write by hand and fail roughly one run in two hundred under a randomised
+partition test. Which is, I suppose, exactly the point of consensus algorithms.
+
+<Callout type="warning" title="If you are doing this for a course">
+  Write the randomised failure test before you write the optimisation. A
+  consensus bug that shows up once every few hundred runs is not a bug you will
+  find by reading your own code.
+</Callout>
+
+## What I would tell myself at the start
+
+Read section 5.4 (safety) *before* implementing section 5.3 (log replication).
+The replication rules look arbitrary until you have seen the safety argument
+they exist to preserve, and once you have, most of the fiddly conditions become
+the only thing they could have been.
+
+The election is elegant. The log is the algorithm.

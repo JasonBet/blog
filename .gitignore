@@ -22,3 +22,13 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# vercel
+.vercel/
+
+# pagefind search index (regenerated on every build)
+public/pagefind/
+
+# local env files
+.env.*
+!.env.example

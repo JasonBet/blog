@@ -1,0 +1,111 @@
+---
+/** Light/dark switch. State lives in localStorage; theme-init.js applies it. */
+---
+
+<button
+  class="theme-toggle"
+  type="button"
+  aria-label="Switch between light and dark theme"
+  title="Switch theme"
+  data-theme-toggle
+>
+  <svg class="icon icon--sun" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="4.2"></circle>
+    <g class="rays">
+      <line x1="12" y1="1.8" x2="12" y2="4"></line>
+      <line x1="12" y1="20" x2="12" y2="22.2"></line>
+      <line x1="1.8" y1="12" x2="4" y2="12"></line>
+      <line x1="20" y1="12" x2="22.2" y2="12"></line>
+      <line x1="4.6" y1="4.6" x2="6.2" y2="6.2"></line>
+      <line x1="17.8" y1="17.8" x2="19.4" y2="19.4"></line>
+      <line x1="4.6" y1="19.4" x2="6.2" y2="17.8"></line>
+      <line x1="17.8" y1="6.2" x2="19.4" y2="4.6"></line>
+    </g>
+  </svg>
+  <svg class="icon icon--moon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1Z"></path>
+  </svg>
+</button>
+
+<style>
+  .theme-toggle {
+    display: grid;
+    place-items: center;
+    position: relative;
+    width: 2.2rem;
+    height: 2.2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+  }
+
+  .theme-toggle:hover {
+    color: var(--text);
+    background: var(--bg-sunken);
+  }
+
+  .icon {
+    grid-area: 1 / 1;
+    width: 1.05rem;
+    height: 1.05rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+
+  /* Cross-fade with a quarter turn: quiet, but it acknowledges the click. */
+  .icon--sun {
+    opacity: 0;
+    transform: rotate(-70deg) scale(0.6);
+  }
+  .icon--moon {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+
+  :global(:root[data-theme='dark']) .icon--sun {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+  :global(:root[data-theme='dark']) .icon--moon {
+    opacity: 0;
+    transform: rotate(70deg) scale(0.6);
+  }
+
+  .rays {
+    transform-origin: center;
+  }
+</style>
+
+<script>
+  /**
+   * Bundled by Astro into an external module, so a strict
+   * `script-src 'self'` CSP keeps working. Re-binds after every client-side
+   * navigation because the header is re-rendered on swap.
+   */
+  import { claim, onReady } from '@/lib/client';
+
+  function bind() {
+    const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+    if (!button || !claim(button)) return;
+
+    button.addEventListener('click', () => {
+      const root = document.documentElement;
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try {
+        localStorage.setItem('theme', next);
+      } catch {
+        /* Private browsing: the choice just will not persist. */
+      }
+    });
+  }
+
+  onReady(bind);
+</script>

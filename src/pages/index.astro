@@ -1,17 +1,126 @@
 ---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import FeaturedPost from '@/components/FeaturedPost.astro';
+import PostListItem from '@/components/PostListItem.astro';
+import Newsletter from '@/components/Newsletter.astro';
+import { getPosts, pickFeatured } from '@/lib/posts';
+import { SITE, TOPICS } from '@/consts';
 
+const posts = await getPosts();
+const featured = pickFeatured(posts);
+const rest = posts.filter((post) => post.id !== featured?.id).slice(0, 8);
+const hasMore = posts.length > rest.length + (featured ? 1 : 0);
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout title={SITE.title} wide>
+  <section class="intro reveal">
+    <h1 class="lede">
+      Notes from a graduate CS student — written to understand, not to impress.
+    </h1>
+    <p class="sub">
+      I write things down while I learn them: {' '}
+      {
+        (Object.keys(TOPICS) as (keyof typeof TOPICS)[]).map((key, i, arr) => (
+          <>
+            <a class="link" href={`/topics/${key}/`}>{TOPICS[key].name.toLowerCase()}</a>
+            {i < arr.length - 2 ? ', ' : i === arr.length - 2 ? ', and ' : '.'}
+          </>
+        ))
+      }
+    </p>
+  </section>
+
+  {featured && <FeaturedPost post={featured} />}
+
+  {
+    rest.length > 0 && (
+      <section class="recent" aria-labelledby="recent-heading">
+        <h2 class="section-heading" id="recent-heading">
+          <span>More writing</span>
+          {hasMore && <a class="link all" href="/posts/">All posts →</a>}
+        </h2>
+
+        <div class="list">
+          {rest.map((post, i) => (
+            <PostListItem post={post} index={i} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    posts.length === 0 && (
+      <p class="empty">
+        No posts yet. Add a file to <code>src/content/blog/</code> to get started —
+        see <code>WRITING.md</code>.
+      </p>
+    )
+  }
+
+  <div class="signup">
+    <Newsletter />
+  </div>
+</BaseLayout>
+
+<style>
+  .intro {
+    padding-block: clamp(3rem, 9vw, 6rem) clamp(2.5rem, 6vw, 4rem);
+    max-width: 34ch;
+  }
+
+  .lede {
+    font-size: clamp(1.7rem, 1.2rem + 2.6vw, 2.7rem);
+    letter-spacing: -0.024em;
+    line-height: 1.16;
+  }
+
+  .sub {
+    margin-top: 1.15rem;
+    color: var(--text-muted);
+    font-size: 1rem;
+    max-width: 46ch;
+  }
+
+  .recent {
+    margin-top: 3.5rem;
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.95rem;
+    font-weight: 560;
+    color: var(--text-muted);
+    padding-bottom: 0.5rem;
+  }
+
+  .all {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--text-faint);
+  }
+
+  .list {
+    border-top: 1px solid var(--rule);
+  }
+
+  .empty {
+    padding-block: 3rem;
+    color: var(--text-muted);
+  }
+
+  .signup {
+    max-width: var(--shell);
+    margin-inline: auto;
+  }
+
+  @media (min-width: 46rem) {
+    .intro {
+      max-width: 22ch;
+    }
+  }
+</style>

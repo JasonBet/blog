@@ -1,0 +1,121 @@
+---
+import { NAV, SITE } from '@/consts';
+import ThemeToggle from '@/components/ThemeToggle.astro';
+
+const path = Astro.url.pathname;
+const isActive = (href: string) =>
+  href === '/' ? path === '/' : path.startsWith(href);
+---
+
+<header class="site-header">
+  <div class="shell-wide bar">
+    <a class="wordmark" href="/" aria-label={`${SITE.title} — home`}>
+      {SITE.title}
+    </a>
+
+    <nav class="nav" aria-label="Primary">
+      <ul>
+        {
+          NAV.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                class:list={['nav-link', { 'is-active': isActive(item.href) }]}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <ThemeToggle />
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in oklab, var(--bg) 86%, transparent);
+    backdrop-filter: saturate(160%) blur(12px);
+    -webkit-backdrop-filter: saturate(160%) blur(12px);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--dur) var(--ease);
+  }
+
+  /* The rule only appears once you have scrolled past the top of the page. */
+  :global(body.is-scrolled) .site-header {
+    border-bottom-color: var(--rule);
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    min-height: 4rem;
+  }
+
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.02rem;
+    letter-spacing: -0.01em;
+    margin-right: auto;
+    transition: color var(--dur) var(--ease);
+  }
+  .wordmark:hover {
+    color: var(--accent);
+  }
+
+  .nav ul {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.9rem, 2.4vw, 1.6rem);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-link {
+    position: relative;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    padding-block: 0.35rem;
+    transition: color var(--dur) var(--ease);
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur) var(--ease);
+  }
+
+  .nav-link:hover,
+  .nav-link.is-active {
+    color: var(--text);
+  }
+  .nav-link:hover::after,
+  .nav-link.is-active::after {
+    transform: scaleX(1);
+  }
+
+  @media (max-width: 30rem) {
+    .nav-link {
+      font-size: 0.8rem;
+    }
+    .bar {
+      gap: 0.75rem;
+    }
+  }
+</style>

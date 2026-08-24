@@ -1,0 +1,100 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PostListItem from '@/components/PostListItem.astro';
+import { TOPICS, type TopicKey } from '@/consts';
+import { getPosts, type Post } from '@/lib/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return (Object.keys(TOPICS) as TopicKey[]).map((topic) => ({
+    params: { topic },
+    props: { topic, posts: posts.filter((post) => post.data.topic === topic) },
+  }));
+}
+
+interface Props {
+  topic: TopicKey;
+  posts: Post[];
+}
+
+const { topic, posts } = Astro.props;
+const meta = TOPICS[topic];
+---
+
+<BaseLayout title={meta.name} description={meta.description} wide>
+  <header
+    class="page-head reveal"
+    style={`--topic-accent: ${meta.accent}`}
+  >
+    <p class="eyebrow">
+      <a class="link" href="/topics/">Topics</a>
+      <span aria-hidden="true">/</span>
+    </p>
+
+    <h1 class="title">
+      <span class="dot" aria-hidden="true"></span>
+      {meta.name}
+    </h1>
+
+    <p class="desc">{meta.description}</p>
+    <p class="meta">{posts.length} {posts.length === 1 ? 'post' : 'posts'}</p>
+  </header>
+
+  <div class="list">
+    {posts.map((post, i) => <PostListItem post={post} index={i} />)}
+  </div>
+
+  {
+    posts.length === 0 && (
+      <p class="empty">
+        Nothing here yet. Set <code>topic: {topic}</code> in a post's frontmatter
+        and it will appear on this page.
+      </p>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .page-head {
+    padding-block: clamp(2.5rem, 7vw, 4rem) 2rem;
+  }
+
+  .eyebrow {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .title {
+    margin-top: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .dot {
+    width: 0.42em;
+    height: 0.42em;
+    border-radius: 50%;
+    background: var(--topic-accent);
+    flex: none;
+  }
+
+  .desc {
+    margin-top: 0.9rem;
+    max-width: 52ch;
+    color: var(--text-muted);
+  }
+
+  .meta {
+    margin-top: 1.2rem;
+  }
+
+  .list {
+    border-top: 1px solid var(--rule);
+  }
+
+  .empty {
+    padding-block: 3rem;
+    color: var(--text-muted);
+  }
+</style>
