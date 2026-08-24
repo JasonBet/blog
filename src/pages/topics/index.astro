@@ -79,7 +79,10 @@ const topics = (Object.keys(TOPICS) as TopicKey[]).map((key) => {
 
   .card-link {
     flex: 1;
-    display: block;
+    /* Column flex so the post count can be pinned to the bottom, keeping
+       the counts on one line across cards of unequal description length. */
+    display: flex;
+    flex-direction: column;
     padding: 1.5rem 1.5rem 1.6rem;
     border: 1px solid var(--rule);
     border-radius: 12px;
@@ -115,7 +118,8 @@ const topics = (Object.keys(TOPICS) as TopicKey[]).map((key) => {
   }
 
   .count {
-    margin-top: 1rem;
+    margin-top: auto;
+    padding-top: 1rem;
     font-size: 0.76rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;

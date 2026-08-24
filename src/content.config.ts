@@ -12,13 +12,14 @@ import { TOPIC_KEYS } from './consts';
  *   src/content/blog/my-post/index.mdx      -> /posts/my-post
  *       (put the post's images in that same folder)
  *
- * Files and folders starting with "_" are ignored, which makes "_drafts/"
- * a convenient scratch area.
+ * Files and folders whose name starts with "_" are ignored entirely, which
+ * makes "_drafts/" a convenient scratch area for things you do not even want
+ * the schema to validate yet.
  */
 const blog = defineCollection({
   loader: glob({
     base: './src/content/blog',
-    pattern: '**/[!_]*.{md,mdx}',
+    pattern: ['**/*.{md,mdx}', '!**/_*', '!**/_*/**'],
   }),
   schema: ({ image }) =>
     z.object({

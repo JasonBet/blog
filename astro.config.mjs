@@ -43,7 +43,15 @@ export default defineConfig({
           {
             behavior: 'prepend',
             properties: { className: ['heading-anchor'], ariaHidden: 'true', tabIndex: -1 },
-            content: { type: 'text', value: '#' },
+            // An empty span, not a text node: Astro reads heading text after
+            // rehype plugins run, so a literal "#" here would show up in the
+            // table of contents. The glyph comes from CSS instead.
+            content: {
+              type: 'element',
+              tagName: 'span',
+              properties: { className: ['heading-anchor-glyph'] },
+              children: [],
+            },
           },
         ],
       ],

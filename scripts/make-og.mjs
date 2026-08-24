@@ -8,7 +8,6 @@
  * The output is committed to the repository, so the build never depends on
  * this script running. Re-run it if you change the site title or palette.
  */
-import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 

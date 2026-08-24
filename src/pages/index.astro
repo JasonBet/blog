@@ -66,13 +66,16 @@ const hasMore = posts.length > rest.length + (featured ? 1 : 0);
 <style>
   .intro {
     padding-block: clamp(3rem, 9vw, 6rem) clamp(2.5rem, 6vw, 4rem);
-    max-width: 34ch;
   }
 
   .lede {
     font-size: clamp(1.7rem, 1.2rem + 2.6vw, 2.7rem);
     letter-spacing: -0.024em;
     line-height: 1.16;
+    /* `ch` here is relative to the heading's own (large) size, so this is a
+       real measure of about a dozen words per line — not the body-text
+       measure it would be if the limit sat on the wrapper. */
+    max-width: 17ch;
   }
 
   .sub {
@@ -118,9 +121,5 @@ const hasMore = posts.length > rest.length + (featured ? 1 : 0);
     margin-inline: auto;
   }
 
-  @media (min-width: 46rem) {
-    .intro {
-      max-width: 22ch;
-    }
-  }
+
 </style>

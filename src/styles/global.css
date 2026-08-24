@@ -333,6 +333,9 @@ a {
   font-weight: 400;
   text-decoration: none;
 }
+.prose .heading-anchor-glyph::before {
+  content: '#';
+}
 .prose :is(h2, h3, h4):hover .heading-anchor,
 .prose .heading-anchor:focus-visible {
   opacity: 1;

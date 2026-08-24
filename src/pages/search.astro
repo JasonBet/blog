@@ -168,7 +168,10 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
     if (pagefind || loadFailed) return pagefind;
     try {
       // Built by `pagefind` after the Astro build; absent during `astro dev`.
-      pagefind = (await import(/* @vite-ignore */ '/pagefind/pagefind.js')) as PagefindApi;
+      // The path is held in a variable so neither TypeScript nor Vite tries
+      // to resolve a file that only exists once the site has been built.
+      const indexUrl = '/pagefind/pagefind.js';
+      pagefind = (await import(/* @vite-ignore */ indexUrl)) as PagefindApi;
       await pagefind.options({ excerptLength: 28 });
       return pagefind;
     } catch {

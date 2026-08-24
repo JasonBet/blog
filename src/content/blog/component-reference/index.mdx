@@ -1,0 +1,170 @@
+---
+title: 'Component reference'
+description: 'Every media component this blog provides, rendered, with the source next to it. Kept as a permanent draft so it never appears on the live site.'
+pubDate: 2026-01-01
+topic: systems
+tags: ['reference']
+draft: true
+---
+
+import shot from '../attention-from-scratch/head-1.png';
+import wide from '../raft-consensus/log-replication.png';
+import g1 from '../attention-from-scratch/head-1.png';
+import g2 from '../attention-from-scratch/head-2.png';
+import g3 from '../attention-from-scratch/head-3.png';
+
+This post exists so you can *see* every component while you write. It has
+`draft: true`, so it shows up in `npm run dev` and is never built for the live
+site. (If you want a scratch area the schema does not even validate, put files
+in a folder whose name starts with an underscore — `src/content/blog/_drafts/`
+is ignored entirely.)
+
+Keep this post. Delete it. Either is fine.
+
+## Figure — an image with a caption
+
+```mdx
+import shot from './diagram.png';
+
+<Figure src={shot} alt="What it shows" caption="A caption underneath." />
+```
+
+<Figure src={shot} alt="An attention heat map" caption="A caption underneath." />
+
+## Figure — an image with text beside it
+
+Pass children and the text sits alongside the image on a wide screen, and
+underneath it on a phone. `side="left"` puts the image on the right instead.
+
+```mdx
+<Figure src={shot} alt="…" side="right">
+  Whatever you write here appears next to the image.
+</Figure>
+```
+
+<Figure src={shot} alt="An attention heat map" side="right">
+  Whatever you write here appears next to the image. It takes normal markdown,
+  so you can **emphasise** things or [link out](https://example.com) as usual.
+
+  Several paragraphs work too.
+</Figure>
+
+## Figure — breaking out of the text column
+
+Add `wide` and the image spans wider than the reading measure. Good for
+diagrams that need the room.
+
+```mdx
+<Figure src={diagram} alt="…" caption="…" wide />
+```
+
+<Figure
+  src={wide}
+  alt="Rows of log entries, some filled and some dashed"
+  caption="A wide figure, spanning past the reading column."
+  wide
+/>
+
+## Gallery — a grid of photos with a lightbox
+
+Click any image to enlarge it. Escape closes it.
+
+```mdx
+<Gallery
+  columns={3}
+  images={[
+    { src: g1, alt: 'First',  caption: 'Optional per-image caption.' },
+    { src: g2, alt: 'Second' },
+    { src: g3, alt: 'Third' },
+  ]}
+  caption="An optional caption for the whole gallery."
+/>
+```
+
+<Gallery
+  columns={3}
+  images={[
+    { src: g1, alt: 'First image', caption: 'Optional per-image caption.' },
+    { src: g2, alt: 'Second image' },
+    { src: g3, alt: 'Third image' },
+  ]}
+  caption="An optional caption for the whole gallery."
+/>
+
+## Video — YouTube, Vimeo, or your own file
+
+Nothing loads from YouTube until you press play, so a page full of embeds still
+costs one request. The example below uses a placeholder video ID — replace it
+with your own.
+
+```mdx
+<Video youtube="aircAruvnKk" title="But what is a neural network?" />
+<Video vimeo="76979871" title="A Vimeo embed" />
+<Video src="/media/demo.mp4" title="A file in /public" poster={shot} />
+```
+
+<Video
+  youtube="aircAruvnKk"
+  title="But what is a neural network?"
+  caption="Click-to-load: no request reaches YouTube until you press play."
+/>
+
+## Callout — asides that should not interrupt the flow
+
+```mdx
+<Callout type="note" title="Optional custom title">Text.</Callout>
+```
+
+<Callout type="note">
+  `type="note"` — the default. For a remark that is worth setting apart.
+</Callout>
+
+<Callout type="tip" title="Worth knowing">
+  `type="tip"` — for the thing you wish someone had told you earlier.
+</Callout>
+
+<Callout type="warning">
+  `type="warning"` — for the mistake you want the reader not to repeat.
+</Callout>
+
+<Callout type="definition" title="Amortised cost">
+  `type="definition"` — for terms you are introducing.
+</Callout>
+
+## Plain markdown still works
+
+Ordinary images need no component at all:
+
+```md
+![Alt text](./diagram.png)
+```
+
+So do tables:
+
+| Component | Use it for |
+| --- | --- |
+| `Figure` | One image, optionally with a caption or side text |
+| `Gallery` | Several images at once |
+| `Video` | Embedded or self-hosted video |
+| `Callout` | An aside, definition or warning |
+
+Code blocks are highlighted in both light and dark themes:
+
+```rust
+fn main() {
+    let terms: Vec<u32> = (1..=5).collect();
+    println!("{terms:?}");
+}
+```
+
+And maths, inline like $\Theta(n \log n)$ or as a display block:
+
+$$
+\sum_{i=0}^{k} 2^i = 2^{k+1} - 1
+$$
+
+## Headings get anchors
+
+Hover any heading in this post and a `#` appears to its left — that is a
+permanent link to the section. The table of contents on the right is generated
+from these automatically, and appears once a post has three or more headings.

@@ -8,10 +8,16 @@ interface Props {
 
 const { date, format = 'long', class: className } = Astro.props;
 
+/*
+ * Formatted in UTC on purpose. `pubDate: 2026-01-01` in frontmatter parses to
+ * midnight UTC, so formatting in local time would render it as 31 December
+ * for every reader west of Greenwich.
+ */
 const label = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
   month: format === 'long' ? 'long' : 'short',
   year: format === 'long' ? 'numeric' : undefined,
+  timeZone: 'UTC',
 }).format(date);
 ---
 

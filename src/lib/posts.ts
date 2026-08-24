@@ -113,7 +113,8 @@ export function collectTopics(posts: Post[]): { key: TopicKey; count: number }[]
 export function groupByYear(posts: Post[]): { year: number; posts: Post[] }[] {
   const groups = new Map<number, Post[]>();
   for (const post of posts) {
-    const year = post.data.pubDate.getFullYear();
+    // UTC to match how FormattedDate renders — see that component.
+    const year = post.data.pubDate.getUTCFullYear();
     if (!groups.has(year)) groups.set(year, []);
     groups.get(year)!.push(post);
   }
