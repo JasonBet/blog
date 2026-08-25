@@ -51,10 +51,11 @@ Non-obvious tokens in the policy — each is required, do not "tidy" them away:
 
 After changing client JS, the CSP, or asset handling:
 
-```
-npm run build
-grep -rnE '<script type="module">|onclick=|onsubmit=' dist/    # must print nothing
-```
+`npm run build` runs `scripts/check-csp.mjs`, which fails the build on inline
+scripts, inline event handlers, and `data:` font URIs. Do not weaken or skip
+it — it is the only thing standing between a local pass and a broken
+deployment. (The grep this replaced missed a plain `<script>` with no
+`type="module"`, which is exactly how the analytics regression shipped.)
 
 Anything that changes what the deployed directory contains (adapters, build
 steps, asset handling) needs checking against the **deployed** output, not just

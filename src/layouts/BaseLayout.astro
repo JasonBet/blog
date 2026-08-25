@@ -41,6 +41,14 @@ const { wide = false, ...head } = Astro.props;
   </head>
 
   <body>
+    {/*
+      Vercel Web Analytics. Served from this origin, so `script-src 'self'`
+      allows it with no exception. Production only - the path 404s locally.
+    */}
+    {import.meta.env.PROD && (
+      <script is:inline defer src="/_vercel/insights/script.js"></script>
+    )}
+
     <a class="skip-link" href="#main">Skip to content</a>
 
     <Header />

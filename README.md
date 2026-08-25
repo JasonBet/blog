@@ -27,6 +27,7 @@ browser updates.
 | `npm run build` | Production build into `dist/`, then builds the search index. |
 | `npm run preview` | Serve `dist/` locally — the closest thing to production. |
 | `npm run check` | Type-check the whole project. |
+| `npm run check:csp` | Fail if the build contains anything the CSP blocks. |
 | `npm run og` | Regenerate the default social-share image. |
 
 Search only works after `npm run build`, because the index is generated from

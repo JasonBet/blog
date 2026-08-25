@@ -115,13 +115,16 @@ If you add a component with a `<script>` block, import something in it. If you
 forget, the build still succeeds and the feature silently stops working in
 production. To check:
 
+`npm run build` runs an automated check (`scripts/check-csp.mjs`) that fails
+the build if any inline script, inline event handler, or `data:` font URI made
+it into the output. Run it alone with:
+
 ```bash
-npm run build
-grep -rnE '<script type="module">|onclick=|onsubmit=' dist/   # should print nothing
+npm run check:csp
 ```
 
-Inline event handlers (`onclick=`, `onsubmit=`) are blocked by exactly the same
-directive, so they count too.
+Inline event handlers (`onclick=`, `onsubmit=`) are blocked by the same
+directive as inline scripts, so they count too.
 
 **Local testing cannot catch any of this.** `astro dev` and `astro preview` do
 not apply `vercel.json` headers, so anything the policy blocks works perfectly

@@ -66,9 +66,11 @@ export default defineConfig({
 
   integrations: [mdx(), sitemap({ filter: (page) => !page.includes('/404') })],
 
-  adapter: vercel({
-    webAnalytics: { enabled: true },
-  }),
+  // Web Analytics is loaded by BaseLayout instead of via the adapter's
+  // `webAnalytics` option: that option injects an *inline* bootstrap script,
+  // which this site's `script-src 'self'` blocks on every page. The script it
+  // bootstraps is same-origin, so loading it directly needs no CSP change.
+  adapter: vercel(),
 
   // Warm up links the reader is about to click. No extra JS to write.
   prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
