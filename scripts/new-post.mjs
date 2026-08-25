@@ -2,16 +2,21 @@
 /**
  * Scaffold a new blog post.
  *
- *   npm run new                          -> asks you for a title
- *   npm run new "Notes on Raft"          -> uses that title
- *   npm run new "Notes on Raft" systems  -> and that topic
+ *   npm run new                                  ask for everything
+ *   npm run new "Notes on Raft"                  ask for the rest
+ *   npm run new "Notes on Raft" systems          ask for the rest
+ *   npm run new "Notes on Raft" systems --desc "Why elections are easy" \
+ *               --tags consensus,implementation-notes
  *
  * Creates src/content/blog/<slug>/index.mdx with valid frontmatter and a
  * folder ready for the post's images. Never overwrites an existing post.
+ *
+ * Prompts are skipped when stdin is not a terminal, so this is safe to call
+ * from a script or a CI job as long as the values are passed as arguments.
  */
-import { mkdir, writeFile, access } from 'node:fs/promises';
+import { mkdir, writeFile, access, readFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
-import { stdin, stdout, exit } from 'node:process';
+import { stdin, stdout, argv, exit } from 'node:process';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,16 +25,14 @@ const BLOG_DIR = join(ROOT, 'src', 'content', 'blog');
 
 /** Read the topic keys straight out of consts.ts so the two never drift. */
 async function readTopics() {
-  const source = await import('node:fs/promises').then((fs) =>
-    fs.readFile(join(ROOT, 'src', 'consts.ts'), 'utf8'),
-  );
+  const source = await readFile(join(ROOT, 'src', 'consts.ts'), 'utf8');
   const block = source.match(/export const TOPICS = \{([\s\S]*?)\n\} as const;/);
   if (!block) return [];
   return [...block[1].matchAll(/^\s{2}'?([a-z0-9-]+)'?:\s*\{/gm)].map((m) => m[1]);
 }
 
-function slugify(title) {
-  return title
+function slugify(value) {
+  return value
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
@@ -56,6 +59,24 @@ async function exists(path) {
   } catch {
     return false;
   }
+}
+
+/**
+ * Pull `--flag value` pairs out of argv, leaving the positional arguments.
+ */
+function parseArgs(args) {
+  const flags = {};
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg.startsWith('--')) {
+      flags[arg.slice(2)] = args[i + 1] ?? '';
+      i++;
+    } else {
+      positional.push(arg);
+    }
+  }
+  return { flags, positional };
 }
 
 const TEMPLATE = ({ title, description, date, topic, tags }) => `---
@@ -121,35 +142,54 @@ will appear on the site at the next deploy.
 `;
 
 async function main() {
-  const [titleArg, topicArg] = process.argv.slice(2);
+  const { flags, positional } = parseArgs(argv.slice(2));
+  const [titleArg, topicArg] = positional;
   const topics = await readTopics();
 
-  const rl = createInterface({ input: stdin, output: stdout });
+  // Only open a readline interface when there is a human to answer.
+  const interactive = Boolean(stdin.isTTY);
+  const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
+
+  const ask = async (prompt, fallback = '') => {
+    if (!rl) return fallback;
+    const answer = (await rl.question(prompt)).trim();
+    return answer || fallback;
+  };
 
   try {
-    const title = titleArg ?? (await rl.question('Title: '));
-    if (!title.trim()) {
-      console.error('A title is required.');
-      exit(1);
+    const title = (titleArg ?? (await ask('Title: '))).trim();
+    if (!title) {
+      console.error(
+        'A title is required.\n' +
+          '  Interactive: npm run new\n' +
+          '  Direct:      npm run new "My Post Title" <topic>',
+      );
+      return 1;
     }
 
     let topic = topicArg;
     if (!topic) {
-      console.log(`\nTopics: ${topics.join(', ')}`);
-      topic = (await rl.question(`Topic [${topics[0]}]: `)) || topics[0];
+      if (interactive) console.log(`\nTopics: ${topics.join(', ')}`);
+      topic = await ask(`Topic [${topics[0]}]: `, topics[0]);
     }
     if (topics.length > 0 && !topics.includes(topic)) {
       console.error(
-        `\n"${topic}" is not a known topic.\nEither pick one of: ${topics.join(', ')}\nor add it to TOPICS in src/consts.ts first.`,
+        `\n"${topic}" is not a known topic.\n` +
+          `Either pick one of: ${topics.join(', ')}\n` +
+          'or add it to TOPICS in src/consts.ts first.',
       );
-      exit(1);
+      return 1;
     }
 
     const description =
-      (await rl.question('One-line description (you can change this later): ')) ||
-      'TODO: write a one-line description.';
+      flags.desc ??
+      (await ask(
+        'One-line description (you can change this later): ',
+        'TODO: write a one-line description.',
+      ));
 
-    const tagsAnswer = await rl.question('Tags, comma-separated (optional): ');
+    const tagsAnswer =
+      flags.tags ?? (await ask('Tags, comma-separated (optional): '));
     const tags = tagsAnswer
       .split(',')
       .map((t) => slugify(t))
@@ -160,27 +200,35 @@ async function main() {
     const file = join(dir, 'index.mdx');
 
     if (await exists(file)) {
-      console.error(`\nA post already exists at ${relative(ROOT, file)}. Nothing was written.`);
-      exit(1);
+      console.error(
+        `\nA post already exists at ${relative(ROOT, file)}. Nothing was written.`,
+      );
+      return 1;
     }
 
     await mkdir(dir, { recursive: true });
     await writeFile(
       file,
-      TEMPLATE({ title: title.trim(), description: description.trim(), date: today(), topic, tags }),
+      TEMPLATE({
+        title,
+        description: description.trim(),
+        date: today(),
+        topic,
+        tags,
+      }),
       'utf8',
     );
 
     console.log(`\n  Created ${relative(ROOT, file)}`);
     console.log(`  Put this post's images in ${relative(ROOT, dir)}/`);
     console.log(`  It will live at /posts/${slug}/`);
-    console.log(`\n  Next: npm run dev, then open http://localhost:4321/posts/${slug}/\n`);
+    console.log(
+      `\n  Next: npm run dev, then open http://localhost:4321/posts/${slug}/\n`,
+    );
+    return 0;
   } finally {
-    rl.close();
+    rl?.close();
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  exit(1);
-});
+exit(await main());
