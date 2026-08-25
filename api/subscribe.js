@@ -12,6 +12,11 @@
  * Optional:
  *   ALLOWED_ORIGIN  Comma-separated origins allowed to post here.
  *                   Defaults to the deployment's own origin.
+ *
+ * Calling convention: Vercel's Node runtime invokes this with the classic
+ * `(req, res)` pair, while Edge and other Web-standard hosts pass a single
+ * `Request` and expect a `Response`. The default export below accepts either
+ * and normalises to the Web shape, so `respond()` can stay platform-agnostic.
  */
 
 const BUTTONDOWN_ENDPOINT = 'https://api.buttondown.com/v1/subscribers';
@@ -62,7 +67,10 @@ function allowedOrigins(request) {
   return [new URL(request.url).origin];
 }
 
-export default async function handler(request) {
+/**
+ * The actual endpoint. Takes a Web `Request`, returns a Web `Response`.
+ */
+async function respond(request) {
   if (request.method !== 'POST') {
     return json(405, { message: 'Method not allowed.' });
   }
@@ -146,4 +154,59 @@ export default async function handler(request) {
     console.error('Newsletter signup failed:', error?.name ?? 'error');
     return json(502, { message: 'Signup is temporarily unavailable.' });
   }
+}
+
+/* -------------------------------------------------------------------------
+   Node <-> Web adapter
+   ------------------------------------------------------------------------- */
+
+/** Read a Node request body, whether or not the platform pre-parsed it. */
+async function readNodeBody(req) {
+  if (req.body === undefined || req.body === null) {
+    // Nothing pre-parsed — drain the stream ourselves.
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    }
+    return Buffer.concat(chunks).toString('utf8');
+  }
+  if (typeof req.body === 'string') return req.body;
+  if (Buffer.isBuffer(req.body)) return req.body.toString('utf8');
+  // Vercel parses JSON bodies automatically; put it back the way it arrived.
+  return JSON.stringify(req.body);
+}
+
+/** Build a Web `Request` from Node's `IncomingMessage`. */
+async function toWebRequest(req) {
+  const proto = req.headers['x-forwarded-proto'] ?? 'https';
+  const host = req.headers['x-forwarded-host'] ?? req.headers.host ?? 'localhost';
+
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value === undefined) continue;
+    headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+  }
+
+  const method = req.method ?? 'GET';
+  const init = { method, headers };
+  // GET and HEAD must not carry a body — constructing one throws.
+  if (method !== 'GET' && method !== 'HEAD') {
+    init.body = await readNodeBody(req);
+  }
+
+  return new Request(`${proto}://${host}${req.url ?? '/'}`, init);
+}
+
+export default async function handler(requestOrReq, maybeRes) {
+  // Web-standard host (Edge, Bun, Deno, a plain fetch server).
+  if (!maybeRes || typeof maybeRes.setHeader !== 'function') {
+    return respond(requestOrReq);
+  }
+
+  // Vercel's Node runtime: adapt in, run, and write the Response back out.
+  const response = await respond(await toWebRequest(requestOrReq));
+
+  maybeRes.statusCode = response.status;
+  response.headers.forEach((value, key) => maybeRes.setHeader(key, value));
+  maybeRes.end(Buffer.from(await response.arrayBuffer()));
 }
