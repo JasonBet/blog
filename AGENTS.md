@@ -56,6 +56,10 @@ npm run build
 grep -rnE '<script type="module">|onclick=|onsubmit=' dist/    # must print nothing
 ```
 
+Anything that changes what the deployed directory contains (adapters, build
+steps, asset handling) needs checking against the **deployed** output, not just
+`dist/`. Those are now two different directories.
+
 then load the **deployed** site in a real browser and check the console. A
 headless run with `--virtual-time-budget` is not reliable here: Pagefind's
 worker races the virtual clock, so search intermittently reports success or
@@ -75,9 +79,21 @@ on an actual condition (the status text changing) instead.
 - **`site` comes from `VERCEL_PROJECT_PRODUCTION_URL` at build time**, so
   renaming the project needs a redeploy before canonical URLs, RSS and the
   sitemap follow. Set `SITE_URL` to pin a real custom domain.
-- `vercel.json` headers apply because the build is plain static with no Astro
-  adapter. Adding `@astrojs/vercel` would switch to the Build Output API and
-  those headers would stop being applied.
+- **`@astrojs/vercel` is installed** (Vercel's own PR added it to enable Web
+  Analytics). `vercel.json` headers still apply with it — verified against the
+  live deployment, so do not assume the Build Output API drops them.
+- **The adapter breaks the search index unless the build accounts for it.**
+  `astro build` copies `dist/` into `.vercel/output/static/` as its final step,
+  and Vercel serves that directory. Pagefind runs afterwards and writes into
+  `dist/pagefind`, which has already been copied — so the index never ships and
+  every search 404s in production while `npm run preview` works perfectly.
+  `scripts/build-search.mjs` indexes `dist` and then mirrors the result into
+  the adapter output. Keep that mirroring step, and keep its hard failure when
+  Pagefind produces nothing.
+- **Web Analytics is same-origin.** Vercel serves it from
+  `/_vercel/insights/script.js`, not a third-party domain, which is why it
+  works under `script-src 'self'`. If it ever moves to `va.vercel-scripts.com`,
+  the policy needs that host.
 
 ## Other conventions
 

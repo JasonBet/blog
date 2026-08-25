@@ -174,7 +174,8 @@ Distribution
 
 Security
 - Strict Content Security Policy and a full set of security headers
-- No analytics, no tracking scripts, no third-party fonts
+- Vercel Web Analytics (privacy-friendly, cookieless, served same-origin)
+- No third-party fonts, no tag manager, no CDN scripts
 - Video embeds are click-to-load, so nothing reaches YouTube unprompted
 
 ---

@@ -77,13 +77,30 @@ After changing them, check the result at
 ### The Content Security Policy
 
 ```
-script-src  'self' https://giscus.app
-style-src   'self' 'unsafe-inline'
+script-src  'self' 'wasm-unsafe-eval' https://giscus.app
+worker-src  'self' blob:
+style-src   'self' 'unsafe-inline' https://giscus.app
+font-src    'self'
 frame-src   https://giscus.app https://www.youtube-nocookie.com https://player.vimeo.com
 connect-src 'self' https://giscus.app
 img-src     'self' data: https:
 default-src 'self'
 ```
+
+Three of those tokens are load-bearing and easy to mistake for clutter:
+
+- **`'wasm-unsafe-eval'`** — Pagefind compiles a WebAssembly module to run the
+  search index. Without it search hangs forever on "Searching…". It permits
+  WebAssembly compilation only, not `eval()`.
+- **`worker-src 'self' blob:`** — Pagefind's search worker. Without it the
+  worker times out and falls back to the slower main thread.
+- **`https://giscus.app` in `style-src`** — the comment widget's own
+  stylesheet. Without it comments render unstyled.
+
+`font-src 'self'` also forces a build setting: `vite.build.assetsInlineLimit: 0`
+in `astro.config.mjs` stops Vite inlining KaTeX's fonts as `data:` URIs, which
+this directive would otherwise block — silently rendering maths in fallback
+fonts.
 
 `script-src 'self'` means **no inline scripts anywhere**. That constraint is
 load-bearing, and there are two places it shapes the code:
@@ -100,8 +117,16 @@ production. To check:
 
 ```bash
 npm run build
-grep -rn '<script type="module">' dist/    # should print nothing
+grep -rnE '<script type="module">|onclick=|onsubmit=' dist/   # should print nothing
 ```
+
+Inline event handlers (`onclick=`, `onsubmit=`) are blocked by exactly the same
+directive, so they count too.
+
+**Local testing cannot catch any of this.** `astro dev` and `astro preview` do
+not apply `vercel.json` headers, so anything the policy blocks works perfectly
+on localhost and fails only once deployed. Check the browser console on the
+real site after touching client JS, the policy, or asset handling.
 
 `'unsafe-inline'` is present for **styles only**. Syntax highlighting emits
 per-token `style` attributes, which CSP governs under `style-src`. Inline
@@ -112,9 +137,16 @@ script equivalent.
 
 ## Third-party code
 
-The site loads no analytics, no tag manager, no third-party fonts, and no CDN
-scripts. Fonts are self-hosted from `node_modules`. Search runs entirely in the
-browser against a static index.
+The site loads no tag manager, no third-party fonts, and no CDN scripts.
+
+Vercel Web Analytics is enabled. It is cookieless and collects no personally
+identifying information, and Vercel serves its script from a same-origin path
+(`/_vercel/insights/script.js`) rather than a third-party domain — which is why
+it works under `script-src 'self'` without loosening the policy. To remove it,
+drop `webAnalytics` from the adapter options in `astro.config.mjs`.
+
+Fonts are self-hosted from `node_modules`. Search runs entirely in the browser
+against a static index.
 
 Exactly two third parties can ever load, and only if you opt in:
 
