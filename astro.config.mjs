@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
+import vercel from '@astrojs/vercel';
 import { unified } from '@astrojs/markdown-remark';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -64,6 +65,10 @@ export default defineConfig({
   },
 
   integrations: [mdx(), sitemap({ filter: (page) => !page.includes('/404') })],
+
+  adapter: vercel({
+    webAnalytics: { enabled: true },
+  }),
 
   // Warm up links the reader is about to click. No extra JS to write.
   prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
