@@ -11,7 +11,7 @@ export const SITE = {
   title: 'Jason Betsargon',
   /** One-line site description, used for SEO and the RSS feed. */
   description:
-    'Notes from a graduate computer science student — systems, algorithms, machine learning, and the things that only make sense once you write them down.',
+    'Notes from a graduate computer science student — machine learning, cloud computing, algorithms, software engineering, and much more.',
   /** Used for author metadata and the RSS feed. */
   author: 'Jason Betsargon',
   /** BCP-47 language tag for <html lang>. */
@@ -22,7 +22,7 @@ export const SITE = {
 
 /** Primary navigation. Add an entry here and the header picks it up. */
 export const NAV = [
-  { label: 'Writing', href: '/posts' },
+  { label: 'Posts', href: '/posts' },
   { label: 'Topics', href: '/topics' },
   { label: 'Search', href: '/search' },
   { label: 'About', href: '/about' },
@@ -32,6 +32,8 @@ export const NAV = [
 export const SOCIALS = {
   github: 'https://github.com/JasonBet',
   email: 'jasonbetsargon@gmail.com',
+  linkedin: 'https://www.linkedin.com/in/jason-betsargon/',
+  portfolio: 'https://jasonbet.github.io/homepage/',
   rss: '/rss.xml',
 } as const;
 
