@@ -15,10 +15,10 @@ const hasMore = posts.length > rest.length + (featured ? 1 : 0);
 <BaseLayout title={SITE.title} wide>
   <section class="intro reveal">
     <h1 class="lede">
-      Notes from a graduate CS student — written to understand, not to impress.
+      Notes from a graduate CS student — AI/ML, Cloud, SWE, and more...
     </h1>
     <p class="sub">
-      I write things down while I learn them: {' '}
+      I write posts about the topics I'm studying: {' '}
       {
         (Object.keys(TOPICS) as (keyof typeof TOPICS)[]).map((key, i, arr) => (
           <>
