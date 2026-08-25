@@ -74,6 +74,17 @@ Set in `vercel.json` and applied to every response.
 After changing them, check the result at
 [securityheaders.com](https://securityheaders.com).
 
+`vercel.json` is validated against a strict schema and permits **no comment
+keys** — adding one fails the deployment while `npm run build` still passes
+locally. If a push does not seem to take effect, check whether the deployment
+actually succeeded before assuming a caching problem.
+
+The same file also sets caching. `/pagefind/*` deliberately revalidates rather
+than caching for an hour: `pagefind.js` and `pagefind-entry.json` keep stable
+filenames while their contents change every build, and the entry file points at
+content-hashed chunks. Caching them leaves readers holding an index that
+references files no longer deployed, and search fails silently.
+
 ### The Content Security Policy
 
 ```

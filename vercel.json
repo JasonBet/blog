@@ -33,7 +33,6 @@
       ]
     },
     {
-      "comment": "pagefind.js and pagefind-entry.json keep stable filenames but change on every build, and the entry file points at content-hashed chunks. Caching them would leave readers with an index that references files no longer deployed, so search would silently fail until the cache expired.",
       "source": "/pagefind/(.*)",
       "headers": [
         {

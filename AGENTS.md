@@ -91,6 +91,12 @@ on an actual condition (the status text changing) instead.
   `scripts/build-search.mjs` indexes `dist` and then mirrors the result into
   the adapter output. Keep that mirroring step, and keep its hard failure when
   Pagefind produces nothing.
+- **`vercel.json` permits no comment keys.** It is validated against a strict
+  schema, so an extra property fails the *deployment* while the local build
+  still passes. A pushed change that appears to have no effect is worth
+  checking against the deployment status before blaming caches:
+  `gh api repos/JasonBet/blog/deployments --jq '.[0].id'` then
+  `gh api repos/JasonBet/blog/deployments/<id>/statuses --jq '.[0].state'`.
 - **Web Analytics is same-origin.** Vercel serves it from
   `/_vercel/insights/script.js`, not a third-party domain, which is why it
   works under `script-src 'self'`. If it ever moves to `va.vercel-scripts.com`,
