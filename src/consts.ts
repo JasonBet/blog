@@ -80,20 +80,35 @@ export const TOPIC_KEYS = Object.keys(TOPICS) as [TopicKey, ...TopicKey[]];
  * `enabled` to true. All of these values are public by design — giscus is
  * configured entirely client-side and holds no secret.
  */
-export const COMMENTS = {
-  enabled: false,
+interface CommentsConfig {
+  enabled: boolean;
+  /** owner/repo */
+  repo: string;
+  repoId: string;
+  category: string;
+  categoryId: string;
+}
+
+export const COMMENTS: CommentsConfig = {
+  enabled: true,
   repo: 'JasonBet/blog',
-  repoId: '',
+  repoId: 'R_kgDOUDLyEQ',
   category: 'Announcements',
-  categoryId: '',
-} as const;
+  categoryId: 'DIC_kwDOUDLyEc4DEHn6',
+};
 
 /** Newsletter signup. The provider API key lives server-side only. */
-export const NEWSLETTER = {
+interface NewsletterConfig {
+  enabled: boolean;
+  heading: string;
+  blurb: string;
+}
+
+export const NEWSLETTER: NewsletterConfig = {
   enabled: true,
   heading: 'Get new posts by email',
   blurb: 'Occasional notes on what I am studying. No spam, unsubscribe anytime.',
-} as const;
+};
 
 /** How many related posts to show at the bottom of a post. */
 export const RELATED_POST_COUNT = 3;
