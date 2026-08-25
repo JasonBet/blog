@@ -68,6 +68,16 @@ export default defineConfig({
   // Warm up links the reader is about to click. No extra JS to write.
   prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
 
+  vite: {
+    build: {
+      // Emit every asset as a real file instead of inlining small ones as
+      // data: URIs. KaTeX's fonts are small enough to be inlined by default,
+      // and `font-src 'self'` in vercel.json blocks data: URIs — which left
+      // maths rendering in fallback fonts. Real files also cache better.
+      assetsInlineLimit: 0,
+    },
+  },
+
   image: {
     // Only these remote hosts may be optimised at build time. Keeping this
     // list closed stops a stray markdown URL turning the build into an

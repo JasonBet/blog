@@ -19,7 +19,7 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
     <h1>Search</h1>
   </header>
 
-  <form class="search" role="search" data-search onsubmit="return false">
+  <form class="search" role="search" data-search>
     <label class="sr-only" for="search-input">Search posts</label>
     <div class="field">
       <svg class="glass" viewBox="0 0 24 24" aria-hidden="true">
@@ -206,10 +206,19 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
       }
 
       status!.textContent = 'Searching…';
-      const search = await api.search(term);
-      if (mine !== token) return;
 
-      const top = await Promise.all(search.results.slice(0, 20).map((r) => r.data()));
+      let top: PagefindResultData[];
+      try {
+        const search = await api.search(term);
+        if (mine !== token) return;
+        top = await Promise.all(search.results.slice(0, 20).map((r) => r.data()));
+      } catch (error) {
+        // Never leave "Searching…" on screen: a silent hang reads as a broken
+        // page. This is where a blocked WebAssembly compile would land.
+        console.error('Search failed:', error);
+        status!.textContent = 'Search is unavailable right now.';
+        return;
+      }
       if (mine !== token) return;
 
       status!.textContent =
@@ -241,6 +250,17 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
       window.clearTimeout(timer);
       timer = window.setTimeout(() => void run(input.value), 140);
     });
+
+    // Pressing Enter must not submit the form: there is no server to submit
+    // to, and a real submit would reload the page and clear the field.
+    document.querySelector<HTMLFormElement>('[data-search]')?.addEventListener(
+      'submit',
+      (event) => {
+        event.preventDefault();
+        window.clearTimeout(timer);
+        void run(input.value);
+      },
+    );
 
     // Support /search?q=term so results can be linked to.
     const initial = new URLSearchParams(window.location.search).get('q');
